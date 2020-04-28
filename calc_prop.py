@@ -24,7 +24,7 @@ def get_singleprop(peaks,max_delay,min_delay,t_sec=50,evoked_p=[],
             fl=False
             if (v[0]-t)<max_delay and (v[0]-t)>min_delay:
                 # if the peak is appropriate time window
-                print 'uaaaaaaa',v[0]
+                print('uaaaaaaa',v[0])
                 evoked_p.append(v)
                 t = v[0]
                 cnt+=1
@@ -33,7 +33,7 @@ def get_singleprop(peaks,max_delay,min_delay,t_sec=50,evoked_p=[],
                 if detect_bursts:
                     for j2,v2 in enumerate(c):
                         if (v2[0]>v[0] and abs(v2[0]-v[0])<20):
-                            print 'sorry, you burst'
+                            print('sorry, you burst')
                             return cnt-1
                 break # go to next group
 
@@ -48,7 +48,7 @@ def get_meanprop(peaks,first=50,last=100,max_delay=12,min_delay=1,
     '''
     mean_l = 0.
     evoked_p = []
-    for t in xrange(first, last):
+    for t in range(first, last):
         c = get_singleprop(peaks,max_delay,min_delay,t,evoked_p,detect_bursts)
         mean_l +=c 
     mean_l/= float((last-first)/stim_int) # 50 stimulation in [50, 100] sec 

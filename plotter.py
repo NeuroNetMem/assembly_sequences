@@ -3,7 +3,8 @@ from matplotlib import pyplot, gridspec
 import matplotlib
 import numpy
 import brian as bb
-reload(bb)
+import imp
+imp.reload(bb)
 import calc_spikes
 
 from avalan import get_avalanches
@@ -143,7 +144,7 @@ def plot_separatrix_n(nn,t_list=[12,13],t_pre=.005,t_post=.025,ps=0,
     '''
         try to plot a separatrix
     '''
-    reload(calc_spikes)
+    imp.reload(calc_spikes)
     figure = pyplot.figure(figsize=(12.,6.))
     gs = gridspec.GridSpec(20,20)
     gs.update(left=.1,wspace=.05,hspace=.05)
@@ -178,7 +179,7 @@ def plot_separatrix_n(nn,t_list=[12,13],t_pre=.005,t_post=.025,ps=0,
                                             n_spikes=n_spikes)
         #print tas,a,s
         #a=a/nn.s_ass
-        print a
+        print(a)
         a.insert(0,tas[1])
         s.insert(0,tas[2])
         na=numpy.array(a)
@@ -214,7 +215,7 @@ def plot_separatrix_n(nn,t_list=[12,13],t_pre=.005,t_post=.025,ps=0,
     return a,s
 
 def remove_spines(ax,xlim,ylim,xticks,yticks,ylabel,legend,keepx=False):
-    for loc, spine in ax.spines.items():
+    for loc, spine in list(ax.spines.items()):
         if loc in ['left']:
             spine.set_position(('outward',0)) # outward by 10 points
         elif loc in ['right','top']: 
@@ -230,13 +231,13 @@ def remove_spines(ax,xlim,ylim,xticks,yticks,ylabel,legend,keepx=False):
     pyplot.yticks(yticks)
     pyplot.ylim(ylim)
     pyplot.ylabel(ylabel)
-    if legend<>[]: pyplot.legend(legend)
+    if legend!=[]: pyplot.legend(legend)
 
     ax.xaxis.set_ticks_position('bottom')
     ax.yaxis.set_ticks_position('left')
 
 def remove_spines_only(ax, keepx=False):
-    for loc, spine in ax.spines.items():
+    for loc, spine in list(ax.spines.items()):
         if loc in ['left']:
             spine.set_position(('outward', 0)) # outward by 10 points
         elif loc in ['right','top']: 
@@ -302,7 +303,7 @@ def plot_rast_V_I_sep(net,nrn=-2,xlim = [16500,17500]):
     # put an arrow for the neuron we record from
     #pyplot.text(xlim[1]+2,490+nrn,'$\leftarrow$',size=18)
     #pyplot.text(xlim[0]+500-18,-60,'$\lightning$',size=25)
-    pyplot.text(xlim[0]+500-18,-60,'$\Uparrow$',size=25)
+    pyplot.text(xlim[0]+500-18,-60,'$\\Uparrow$',size=25)
     #pyplot.text(xlim[0]+500+23,-80,'Stimulation',size=18)
 
     yticks=[0,100,200,300,400,500]
@@ -533,7 +534,7 @@ def plot_rast_V_I_disc(net, nrn=-2, xlim0=[19375,19625],
     sub_rast0.text(xticks0[0]-130, yticks[-1], 'C', size=28, color='black')
     sub_rast0.text(ylab_xposit, 375, 'Neuron #', rotation = 'vertical',
                     size=20)
-    pyplot.text(xlim0[0]+125-12, -60, '$\Uparrow$', size=25)
+    pyplot.text(xlim0[0]+125-12, -60, '$\\Uparrow$', size=25)
 
     sub_rast0.yaxis.tick_right()
     sub_rast0.spines['right'].set_visible(False)
@@ -569,7 +570,7 @@ def plot_rast_V_I_disc(net, nrn=-2, xlim0=[19375,19625],
     sub_rast.yaxis.set_tick_params(width=1, length=5)
     sub_rast.set_xticklabels([], size=20)
 
-    pyplot.text(xlim1[0]+375-12,-60, '$\Uparrow$', size=25)
+    pyplot.text(xlim1[0]+375-12,-60, '$\\Uparrow$', size=25)
     #sub_rast.set_xticklabels(xticks1_lab, size=20)
     #pyplot.xlabel('Time [ms]', size=20)
 
@@ -798,7 +799,7 @@ def plot_rast_V_I_disc(net, nrn=-2, xlim0=[19375,19625],
     sub_rast20.spines['right'].set_visible(False)
     sub_rast20.xaxis.set_tick_params(width=1, length=5)
     sub_rast20.yaxis.set_tick_params(width=1, length=5)
-    pyplot.text(xlim0[0]+125-12,-60, '$\Uparrow$', size=25)
+    pyplot.text(xlim0[0]+125-12,-60, '$\\Uparrow$', size=25)
 
     kwargs = dict(transform=sub_rast20.transAxes, color='k', clip_on=False)
     sub_rast20.yaxis.tick_left()
@@ -826,7 +827,7 @@ def plot_rast_V_I_disc(net, nrn=-2, xlim0=[19375,19625],
     sub_rast2.plot((-dx1, +dx1), (1-dy1, 1+dy1), **kwargs)
     # bottom-left diagonal
     sub_rast2.plot((-dx1, dx1), (-dy1, +dy1), **kwargs)
-    pyplot.text(xlim2[0]+375-12,-60, '$\Uparrow$', size=25)
+    pyplot.text(xlim2[0]+375-12,-60, '$\\Uparrow$', size=25)
 
     '''
     bar_x = xlim2[-1] - 100
@@ -1096,7 +1097,7 @@ def plot_weights(net):
     pyplot.figure()
     h_max = numpy.max(numpy.array([max(w) for w in net.weights]))
     h_min = numpy.min(numpy.array([min(w) for w in net.weights]))
-    print 'aa',h_max
+    print('aa',h_max)
     #h_max = net.g_max/siemens
     bins = numpy.linspace(0.,h_max,100)
     for i in range(len(net.weights)):

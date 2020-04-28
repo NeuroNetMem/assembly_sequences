@@ -25,5 +25,5 @@ for f in fl:
     syn_ratio_all = ps_syn_all / (rand_syn_all+ps_syn_all)
     #print f, ps_syn_nrn, rand_syn_nrn
     #print f, ps_syn_all, rand_syn_all
-    print f, syn_ratio_nrn, syn_ratio_all
+    print(f, syn_ratio_nrn, syn_ratio_all)
 

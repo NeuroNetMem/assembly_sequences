@@ -218,7 +218,7 @@ class Nets():
         # define variables..needed??
         self.weights = []
         self.create_net()
-        print 'inited ', asctime()
+        print('inited ', asctime())
     
     def create_net(self):
         ''' create a network with and connect it'''
@@ -243,7 +243,7 @@ class Nets():
             # apparently now works only with curr
             self.set_in_curr([self.Pe,self.Pi])
         else:
-            print 'no input, sure about it?'
+            print('no input, sure about it?')
 
         self.C_ee=bb.Synapses(self.Pe,self.Pe,model='w:siemens',pre='ge+=w')
         self.C_ie=bb.Synapses(self.Pe,self.Pi,model='w:siemens',pre='ge+=w')
@@ -281,7 +281,7 @@ class Nets():
             nrn_i = np.arange(self.sh_i, self.Ni)
             p_ind_e= [nrn_e[n*sa_e:(n+1)*sa_e] for n in range(self.n_ass)]
             p_ind_i= [nrn_i[n*sa_i:(n+1)*sa_i] for n in range(self.n_ass)]
-            print 'An ordered sequence is created'
+            print('An ordered sequence is created')
             return p_ind_e, p_ind_i
 
         def gen_no_overlap(): 
@@ -293,7 +293,7 @@ class Nets():
             nrn_perm_i = np.random.permutation(self.Ni)
             p_ind_e= [nrn_perm_e[n*sa_e:(n+1)*sa_e] for n in range(self.n_ass)]
             p_ind_i= [nrn_perm_i[n*sa_i:(n+1)*sa_i] for n in range(self.n_ass)]
-            print 'A random sequence without overlaps is created'
+            print('A random sequence without overlaps is created')
             return p_ind_e, p_ind_i
 
         def gen_ass_overlap(): 
@@ -306,7 +306,7 @@ class Nets():
                     for n in range(self.n_ass)]
             p_ind_i = [np.random.permutation(self.Ni)[:sa_i] 
                     for n in range(self.n_ass)]
-            print 'A random sequence without repetition in a group is created'
+            print('A random sequence without repetition in a group is created')
             return p_ind_e, p_ind_i
 
         def gen_random(): 
@@ -316,7 +316,7 @@ class Nets():
             '''
             p_ind_e = np.random.randint(self.Ne,size=(self.n_ass,sa_e))
             p_ind_i = np.random.randint(self.Ni,size=(self.n_ass,sa_i))
-            print 'A sequence with completely random neurons is created'
+            print('A sequence with completely random neurons is created')
             return p_ind_e, p_ind_i
 
         def gen_dummy():
@@ -378,7 +378,7 @@ class Nets():
                         if remove_old_conn_flag_ee:
                             cee[p1] = cee[p1][len(p1_post):]
                             if p1<5:
-                                print n_gr, p1, len(p1_post)
+                                print(n_gr, p1, len(p1_post))
                         cee[p1].extend(p1_post)
                         # E to E feedforward
                         if n_gr<self.n_ass-1: # in case it's the last group
@@ -405,7 +405,7 @@ class Nets():
                                     if remove_old_conn_flag_ee:
                                         cee[p1] = cee[p1][len(p1_post):]
                                         if p1<5:
-                                            print n_gr, p1, len(p1_post)
+                                            print(n_gr, p1, len(p1_post))
                                     cee[p1].extend(p1_post)
                         # E to E reverse
                         if self.symmetric_sequence:
@@ -469,8 +469,8 @@ class Nets():
                     pr_n = pr*(ran_be+ran_af)/(ran_af+len(p_ind)-i-1)
                     p1_post = p_ind[i-ran_be:][\
                                 np.random.random(len(p_ind)-i+ran_be)<pr_n]
-                    print 'aa', len(p_ind), i, ran_be, ran_af, pr_n
-                    print len(p_ind[i-ran_be:]), len(p_ind)-i+ran_be
+                    print('aa', len(p_ind), i, ran_be, ran_af, pr_n)
+                    print(len(p_ind[i-ran_be:]), len(p_ind)-i+ran_be)
                 # most neurons are happy
                 else:
                     pr_n = pr
@@ -605,7 +605,7 @@ class Nets():
         self.network.add(self.C_ii)
 
         self.weights.append(self.C_ei.w.data.copy()) #save weights
-        print 'connections imprinted! ', asctime()
+        print('connections imprinted! ', asctime())
 
     def boost_pff(self, pf_ee_new):
         '''
@@ -674,8 +674,8 @@ class Nets():
                         for i in range(int(self.pf_ee_new/self.cp_ee)):
                             conn_mat[p1].extend(p1_post)
                         if not gr and not p1:
-                            print p1, p1_post
-                            print 
+                            print(p1, p1_post)
+                            print() 
             #1/0
             return conn_mat
 
@@ -708,7 +708,7 @@ class Nets():
         self.C_ee_ff.w = self.g_ee
         self.C_ee_ff.delay = self.D
         self.network.add(self.C_ee_ff)
-        print 'pff boosted!'
+        print('pff boosted!')
 
     def balance(self, bal_time=2*second, eta_c=1.):
         """
@@ -724,7 +724,7 @@ class Nets():
         self.weights.append(self.C_ei.w.data.copy())         
         eta.eta = 0.0
         t1 = time()
-        print 'balanced: ', t1-t0
+        print('balanced: ', t1-t0)
 
     def run_sim(self, run_time= 1*second):
         """ runs the network for run_time with I plasticity turned off"""
@@ -732,7 +732,7 @@ class Nets():
         eta.eta = 0.0
         self.network.run(run_time)
         t1 = time()
-        print 'run: ', t1-t0
+        print('run: ', t1-t0)
         
     def set_in_curr(self, target, ext_input=None):
         """ ce,ci currents injected in E/I populations"""
@@ -819,7 +819,7 @@ class Nets():
                     self.C_ed[p1,p2]=True
                     #self.C_ee[p1,p2].w=self.g_ee
 
-        print 'hui'
+        print('hui')
         #nn.C_ed.connect_random(nn.dummy_group,nn.p_ass_index[0][0],sparseness=pf)
         self.C_ed.w=self.g_ee
         self.C_ed.delay=self.D
@@ -974,7 +974,7 @@ class Nets():
             for i in range(n_stim):
                 #gr = self.p_ass_index[n][0]
                 gr_num = int(self.n_ass/5.*i)
-                print 'stim to ', gr_num
+                print('stim to ', gr_num)
                 gr = self.p_ass_index[n][gr_num]
                 t = (t0 + n + i*3)*second
                 self.set_noisy_input(gr,t,sigma=0*ms)
@@ -1577,7 +1577,7 @@ def test_tau():
         peak20_time = (mfr > base_fr+(.2*(peak_value-base_fr))).argmax()*wbin - dur_pre
 
         time_const = peak80_time - peak20_time 
-        print 'time const is ', time_const 
+        print('time const is ', time_const) 
 
     plt.show()
     return nn

@@ -27,7 +27,7 @@ def get_spike_train(times,leng=10,t_res=.001):
 def get_pairwise_corr(nn,gr_spikeM,w=1.):
     mean_corr=0.
     for m1 in range(nn.s_ass):
-        print m1
+        print(m1)
         s1 = get_spike_train(gr_spikeM[m1])
         for m2 in range(m1):
             s2 = get_spike_train(gr_spikeM[m2])
@@ -109,8 +109,8 @@ def get_activ(nn,g1=0,g2=1,halfp=200,tstim=19.):
         t1_dis = peak_x+10
         for j in range(nn.s_ass):
             times = nn.mon_spike_e[nn.P_ass_index[ch][g][j]]*1000.
-            stimes.extend(filter(lambda x:x>t0_dis and x<t1_dis ,times))
-        print peak_x, peak_y
+            stimes.extend([x for x in times if x>t0_dis and x<t1_dis])
+        print(peak_x, peak_y)
 
         disper.append((numpy.array(stimes) - peak_x).std())
         #disper.append(get_pulse(stimes,peak_x,1.0))
@@ -159,7 +159,7 @@ def get_meanprop(peaks, first=50, last=100, stim_int = 1):
     ''' get average propagation depth from all the stimulations in run state'''
     mean_l = 0.
     evoked_p = []
-    for t in xrange(first, last):
+    for t in range(first, last):
         c = get_singleprop(peaks,t,evoked_p)
         mean_l +=c 
     mean_l/= float((last-first)/stim_int) # 50 stimulation in [50, 100] sec 
@@ -271,7 +271,7 @@ def get_pulse(stimes,peak_x, t_theta = 2.0):
     kurt = ((y-y.mean())**4).mean()/s**4-3.
     kurt2 = kurtosis(y)
     #print len(stimes), len(y), s
-    print kurt, 
+    print(kurt, end=' ') 
     return s
     #return kurt
 
@@ -288,13 +288,13 @@ def plot_prop():
         for j,pf in enumerate(pf_l):
 
             fname = 'datf/pr' + str(pr) + 'pf' + str(pf) + '.pck'
-            print fname
+            print(fname)
             if os.path.exists(fname)==False:
                 fname = 'datf/pr' + str(pr)[1:] + 'pf' + str(pf) + '.pck'
                 if os.path.exists(fname)==False:
                     fname = 'datf/pr' + str(pr)[1:] + '0pf' + str(pf) + '.pck'
                     if os.path.exists(fname)==False:
-                        print 'no f.'
+                        print('no f.')
                         continue 
             f = open(fname)
             l = pickle.load(f)
@@ -338,9 +338,9 @@ def plot_smth():
             #fname = 'datf2/g'+str(gc)+ 'pr'+str(pr) + 'pf'+str(pf) + '.pck'
             fname = 'data/datf_pr_vs_pf/g'+str(gc)+'r'+str(p_rand)+\
                                 'pr'+str(pr) + 'pf'+str(pf) + '.pck'
-            print fname
+            print(fname)
             if os.path.exists(fname)==False:
-                print 'no f.'
+                print('no f.')
                 continue 
             f = open(fname)
             l = pickle.load(f)
@@ -449,5 +449,5 @@ def calc_corri_old_slow(nn):
                     #if j==0: print stimes
                     ass_syn += sum(abs(stimes-runwin)<tau) 
                 ass_syn/=nn.s_ass
-        print runwin, ass_syn
+        print(runwin, ass_syn)
     
