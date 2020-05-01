@@ -35,14 +35,14 @@ eqs_inh = '''dv/dt = (g_l*(v_r-v)+Ie+Ii+I)/(C_m) : volt
             Ie = ge*(v_e-v) : amp
             Ii = gi*(v_i-v) : amp
             I : amp '''
-eq_stdp = '''dx_post/dt = -x_post/tau_stdp : 1 (event-driven)
-            dx_pre/dt = -x_pre/tau_stdp : 1 (event-driven)
+eq_stdp = '''dxpost/dt = -xpost/tau_stdp : 1 (event-driven)
+            dxpre/dt = -xpre/tau_stdp : 1 (event-driven)
             w: siemens '''
 eq_pre = '''gi+=w
-            w=clip(w+eta.eta*(x_post-alpha)*g_ei,g_min,g_max)
-            x_pre+=1'''
-eq_post = '''w=clip(w+eta.eta*x_pre*g_ei,g_min,g_max)
-            x_post+=1'''
+            w=clip(w+eta.eta*(xpost-alpha)*g_ei,g_min,g_max)
+            xpre+=1'''
+eq_post = '''w=clip(w+eta.eta*xpre*g_ei,g_min,g_max)
+            xpost+=1'''
 
 
 def if_else(condition, a, b):
@@ -252,7 +252,7 @@ class Nets:
 
         self.create_net()
 
-        print('inited ', asctime())
+        print('initiated ', asctime())
 
     def create_net(self):
         """ create a network with and connect it"""
@@ -282,18 +282,18 @@ class Nets:
         else:
             print('no input, sure about it?')
 
-        self.C_ee = bb.Synapses(self.Pe, self.Pe, model='w:siemens', pre='ge+=w')
-        self.C_ie = bb.Synapses(self.Pe, self.Pi, model='w:siemens', pre='ge+=w')
-        self.C_ii = bb.Synapses(self.Pi, self.Pi, model='w:siemens', pre='gi+=w')
+        self.C_ee = bb.Synapses(self.Pe, self.Pe, model='w:siemens', on_pre='ge+=w')
+        self.C_ie = bb.Synapses(self.Pe, self.Pi, model='w:siemens', on_pre='ge+=w')
+        self.C_ii = bb.Synapses(self.Pi, self.Pi, model='w:siemens', on_pre='gi+=w')
         stdp_on = True
         if stdp_on:
             namespace = {'exp': np.exp, 'clip': np.clip, 'g_ei': self.g_ei}
             self.C_ei = bb.Synapses(self.Pi, self.Pe,
-                                    model=eq_stdp, pre=eq_pre, post=eq_post,
+                                    model=eq_stdp, on_pre=eq_pre, on_post=eq_post,
                                     namespace=namespace)
         else:
             self.C_ei = bb.Synapses(self.Pi, self.Pe,
-                                    model='w:siemens', pre='gi+=w')
+                                    model='w:siemens', on_pre='gi+=w')
 
     def generate_ps_assemblies(self, ass_randomness='gen_no_overlap'):
         """
@@ -718,7 +718,7 @@ class Nets:
 
         self.pf_ee_new = pf_ee_new
         self.C_ee_ff = bb.Synapses(self.Pe, self.Pe,
-                                   model='w:siemens', pre='ge+=w')
+                                   model='w:siemens', on_pre='ge+=w')
         if self.continuous_ass:
             conn_mat = get_cont_conn()
         else:
@@ -800,7 +800,7 @@ class Nets:
         self.P_poisson = bb.PoissonGroup(N_p, f_p, self.network.clock)
         self.network.add(self.P_poisson)
         for gr in target:
-            Cep = bb.Synapses(self.P_poisson, gr, model='w:siemens', pre='ge+=w')
+            Cep = bb.Synapses(self.P_poisson, gr, model='w:siemens', on_pre='ge+=w')
             Cep.connect_random(self.P_poisson, gr, sparseness=sp)
             Cep.w = coef_ep * self.g_ee
             self.network.add(Cep)
@@ -809,7 +809,7 @@ class Nets:
         """adding sync inputs at some time points"""
         # noinspection PyTypeChecker
         ext_in = bb.SpikeGeneratorGroup(1, indices=bb.array([0]), times=bb.array([time_f]), clock=self.network.clock)
-        C_syne = bb.Synapses(ext_in, target, model='w:siemens', pre='ge+=w')
+        C_syne = bb.Synapses(ext_in, target, model='w:siemens', on_pre='ge+=w')
         C_syne.connect_random(ext_in, target, sparseness=1.)
         C_syne.w = 30. * self.g_ee
         self.network.add(ext_in, C_syne)
@@ -818,7 +818,7 @@ class Nets:
         """adding sync inputs at some time points"""
         # noinspection PyTypeChecker
         ext_in = bb.SpikeGeneratorGroup(1, indices=[0], times=[time_f], clock=self.network.clock)
-        C_syne = bb.Synapses(ext_in, self.Pe, model='w:siemens', pre='ge+=w')
+        C_syne = bb.Synapses(ext_in, self.Pe, model='w:siemens', on_pre='ge+=w')
         for n in target:
             C_syne.connect_random(ext_in, self.Pe[n], sparseness=1.)
         C_syne.w = 30. * self.g_ee
@@ -834,7 +834,7 @@ class Nets:
         t0 = time_f - 6. * sigma  # mean delay is set to 6*sigma
         # noinspection PyTypeChecker
         ext_in = bb.SpikeGeneratorGroup(1, indices=[0], times=[t0], clock=self.network.clock)
-        C_syne = bb.Synapses(ext_in, self.Pe, model='w:siemens', pre='ge+=w')
+        C_syne = bb.Synapses(ext_in, self.Pe, model='w:siemens', on_pre='ge+=w')
         for n in target:
             C_syne.connect_random(ext_in, self.Pe[n], sparseness=1.)
         C_syne.w = mcoef * self.g_ee
@@ -849,7 +849,7 @@ class Nets:
     #     self.dummy_group = bb.NeuronGroup(500, eqs_exc, threshold=-50 * mV,
     #                                       reset=-60 * mV, refractory=2. * ms)
     #     self.C_ed = bb.Synapses(self.dummy_group, self.Pe,
-    #                             model='w:siemens', pre='ge+=w')
+    #                             model='w:siemens', on_pre='ge+=w')
     #     for p1 in self.dummy_group:
     #         for p2 in p_index[n_gr + 1]:
     #             if np.random.random() < nn.pf_ee:
@@ -1239,7 +1239,7 @@ def test_psps():
                 n_ass=0, s_ass=1, pr=0, pf=0, ext_input=0 * pA,
                 g_ee=ge0, g_ie=ge0, g_ei=gi0, g_ii=gi0)
 
-    nn_f.C_ee = bb.Synapses(nn_f.Pe, nn_f.Pe, model='w:siemens', pre='ge+=w')
+    nn_f.C_ee = bb.Synapses(nn_f.Pe, nn_f.Pe, model='w:siemens', on_pre='ge+=w')
     nn_f.C_ee[0, 9] = True
     nn_f.C_ee.w = nn_f.g_ee
     nn_f.C_ee.delay = nn_f.D
@@ -1251,7 +1251,7 @@ def test_psps():
     # noinspection PyTypeChecker
     ext_in = bb.SpikeGeneratorGroup(1, indices=[0], times=[300] * ms, clock=nn_f.network.clock)
     # noinspection PyPep8Naming
-    C_syne = bb.Synapses(ext_in, target, model='w:siemens', pre='ge+=w')
+    C_syne = bb.Synapses(ext_in, target, model='w:siemens', on_pre='ge+=w')
     C_syne.connect_random(ext_in, target, sparseness=1.)
     C_syne.w = 130. * nn_f.g_ee
     nn_f.network.add(ext_in, C_syne)
@@ -1753,8 +1753,8 @@ def test_contin(Ne=20000):
 
 if __name__ == '__main__':
     from matplotlib import pyplot as plt
+    import sys
 
-    '''
     nn=Nets(Ne=20000, Ni=5000, cp_ee=.01, cp_ie=.01, cp_ei=0.01, cp_ii=.01,
         n_ass=444, s_ass=150, pr=.2, pf=.2, synapses_per_nrn=200,
         #n_ass=10,s_ass=500,pr=.15,pf=.03,symmetric_sequence=True,p_rev=.03,
@@ -1766,12 +1766,10 @@ if __name__ == '__main__':
     ii= float(sys.argv[2])
     tr= float(sys.argv[3])
     nn.test_shifts(ie,ii,tr)
-    '''
 
-    '''
-    ne= int(sys.argv[1])
-    nn = test_diff_gff(ne)
-    '''
+    # ne= int(sys.argv[1])
+    # nn = test_diff_gff(ne)
+
     # nn = test_psps()
 
     # nn = test_symm()
