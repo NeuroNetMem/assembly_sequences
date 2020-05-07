@@ -35,14 +35,20 @@ eqs_inh = '''dv/dt = (g_l*(v_r-v)+Ie+Ii+I)/(C_m) : volt
             Ie = ge*(v_e-v) : amp
             Ii = gi*(v_i-v) : amp
             I : amp '''
-eq_stdp = '''dxpost/dt = -xpost/tau_stdp : 1 (event-driven)
-            dxpre/dt = -xpre/tau_stdp : 1 (event-driven)
+eq_stdp = '''dapost/dt = -apost/tau_stdp : 1 (event-driven)
+            dapre/dt = -apre/tau_stdp : 1 (event-driven)
             w: siemens '''
+# eq_pre = '''gi+=w
+#             w=clip(w+eta.eta*(apost-alpha)*g_ei,g_min,g_max)
+#             apre+=1 '''
+# eq_post = '''w=clip(w+eta.eta*apre*g_ei,g_min,g_max)
+#             apost+=1 '''
+
 eq_pre = '''gi+=w
-            w=clip(w+eta.eta*(xpost-alpha)*g_ei,g_min,g_max)
-            xpre+=1'''
-eq_post = '''w=clip(w+eta.eta*xpre*g_ei,g_min,g_max)
-            xpost+=1'''
+            w=clip(w+eta_p*(apost-alpha)*g_ei,g_min,g_max)
+            apre+=1'''
+eq_post = '''w=clip(w+eta_p*apre*g_ei,g_min,g_max)
+            apost+=1'''
 
 
 def if_else(condition, a, b):
@@ -262,10 +268,10 @@ class Nets:
         # create a couple of groups
         # noinspection PyTypeChecker
         self.Pe = bb.NeuronGroup(self.Ne, eqs_exc, threshold=-50 * mV,
-                                 reset=-60 * mV, refractory=2. * ms)
+                                 reset=-60 * mV, refractory=2. * ms, method='euler')
         # noinspection PyTypeChecker
         self.Pi = bb.NeuronGroup(self.Ni, eqs_inh, threshold=-50 * mV,
-                                 reset=-60 * mV, refractory=2. * ms)
+                                 reset=-60 * mV, refractory=2. * ms, method='euler')
 
         self.Pe.v = (-65 + 15 * np.random.rand(self.Ne)) * mV
         self.Pi.v = (-65 + 15 * np.random.rand(self.Ni)) * mV
@@ -287,7 +293,7 @@ class Nets:
         self.C_ii = bb.Synapses(self.Pi, self.Pi, model='w:siemens', on_pre='gi+=w')
         stdp_on = True
         if stdp_on:
-            namespace = {'exp': np.exp, 'clip': np.clip, 'g_ei': self.g_ei}
+            namespace = {'g_ei': self.g_ei, 'eta_p': eta.eta}
             self.C_ei = bb.Synapses(self.Pi, self.Pe,
                                     model=eq_stdp, on_pre=eq_pre, on_post=eq_post,
                                     namespace=namespace)
@@ -363,9 +369,9 @@ class Nets:
             # not to generate a random number for each neurons
             permutated_numbers = np.random.permutation(self.Ne)
             dum_size = 0
-            for nrn in permutated_numbers:
-                if nrn not in indexes_flatten:
-                    dum.append(nrn)
+            for nrn_f in permutated_numbers:
+                if nrn_f not in indexes_flatten:
+                    dum.append(nrn_f)
                     dum_size += 1
                     if dum_size >= self.s_ass:
                         break
@@ -601,7 +607,7 @@ class Nets:
                     nsynapses += k
             presynaptic = np.hstack(presynaptic)
             postsynaptic = np.hstack(postsynaptic)
-            S.create_synapses(presynaptic, postsynaptic, synapses_pre)
+            S.connect(i=presynaptic, j=postsynaptic)
 
         # creates randomly connected matrices
         cee = create_random_matrix(self.Ne, self.Ne, self.cp_ee, True)
@@ -653,10 +659,10 @@ class Nets:
             # E to E feedforward
             for ch in range(self.n_chains):
                 p_index = self.p_ass_index[ch]
-                for gr in range(self.n_ass - 1):
-                    for p1 in p_index[gr]:
-                        p1_post = list(p_index[gr + 1]
-                                       [np.random.random(len(p_index[gr + 1]))
+                for gr_f in range(self.n_ass - 1):
+                    for p1 in p_index[gr_f]:
+                        p1_post = list(p_index[gr_f + 1]
+                                       [np.random.random(len(p_index[gr_f + 1]))
                                         < self.pf_ee_new])
                         conn_mat_f[p1].extend(p1_post)
             return conn_mat_f
@@ -702,15 +708,15 @@ class Nets:
             conn_mat_f = [[] for _ in range(self.Ne)]
             for ch in range(self.n_chains):
                 p_index = self.p_ass_index[ch]
-                for gr in range(self.n_ass - 1):
-                    for p1 in p_index[gr]:
+                for gr_f in range(self.n_ass - 1):
+                    for p1 in p_index[gr_f]:
                         p1_ex_post = ex_post[ex_pre == p1]
                         p1_post = np.intersect1d(
-                            self.p_ass_index[0][gr + 1], p1_ex_post)
+                            self.p_ass_index[0][gr_f + 1], p1_ex_post)
                         for _ in range(int(self.pf_ee_new / self.cp_ee)):
                             # noinspection PyTypeChecker
                             conn_mat_f[p1].extend(p1_post)  # FIX
-                        if not gr and not p1:
+                        if not gr_f and not p1:
                             print(p1, p1_post)
                             print()
                             # 1/0
@@ -797,11 +803,11 @@ class Nets:
         f_p = self.ext_input['f_p']
         sp = self.ext_input['sp']
         coef_ep = self.ext_input['coef_ep']
-        self.P_poisson = bb.PoissonGroup(N_p, f_p, self.network.clock)
+        self.P_poisson = bb.PoissonGroup(N_p, f_p, clock=self.network.clock)
         self.network.add(self.P_poisson)
-        for gr in target:
-            Cep = bb.Synapses(self.P_poisson, gr, model='w:siemens', on_pre='ge+=w')
-            Cep.connect_random(self.P_poisson, gr, sparseness=sp)
+        for gr_f in target:
+            Cep = bb.Synapses(self.P_poisson, gr_f, model='w:siemens', on_pre='ge+=w')
+            Cep.connect(p=sp)
             Cep.w = coef_ep * self.g_ee
             self.network.add(Cep)
 
@@ -836,7 +842,7 @@ class Nets:
         ext_in = bb.SpikeGeneratorGroup(1, indices=[0], times=[t0], clock=self.network.clock)
         C_syne = bb.Synapses(ext_in, self.Pe, model='w:siemens', on_pre='ge+=w')
         for n in target:
-            C_syne.connect_random(ext_in, self.Pe[n], sparseness=1.)
+            C_syne.connect(i=0, j=self.Pe[n])
         C_syne.w = mcoef * self.g_ee
         if sigma > 0.:
             C_syne.delay = np.random.normal(6. * sigma, sigma, len(target))
@@ -844,10 +850,12 @@ class Nets:
             C_syne.delay = np.zeros(len(target))
         self.network.add(ext_in, C_syne)
 
-    # FIX
+    # # FIX
     # def attach_dummy_group(self, pf=.06):
-    #     self.dummy_group = bb.NeuronGroup(500, eqs_exc, threshold=-50 * mV,
-    #                                       reset=-60 * mV, refractory=2. * ms)
+    #     self.dummy_group = bb.NeuronGroup(500, eqs_exc, threshold='v>-50*mV',
+    #                                       reset='v=-60*mV', refractory=2. * ms)
+    #     self.C_ed = bb.Synapses(self.dummy_group, self.Pe,
+    #                             model='w:siemens', pre='ge+=w')
     #     self.C_ed = bb.Synapses(self.dummy_group, self.Pe,
     #                             model='w:siemens', on_pre='ge+=w')
     #     for p1 in self.dummy_group:
@@ -880,14 +888,14 @@ class Nets:
             to be removed in the future
         """
         self.mon_spike_sngl = []  # measure spike times from a few single neurons
-        for nrn in self.nrn_meas_e:
-            self.mon_spike_sngl.append(bb.SpikeMonitor(self.Pe[nrn]))
+        for nrn_f in self.nrn_meas_e:
+            self.mon_spike_sngl.append(bb.SpikeMonitor(self.Pe[nrn_f]))
         self.network.add(self.mon_spike_sngl)
 
         self.mon_spike_gr = []  # measure spike times from groups (for CV and FF)
-        for gr in self.nrngrp_meas:
+        for gr_f in self.nrngrp_meas:
             self.mon_spike_gr.append(bb.SpikeMonitor(
-                self.p_ass[ch][gr][0:self.n_spikeM_gr]))
+                self.p_ass[ch][gr_f][0:self.n_spikeM_gr]))
         # also control group of neurons which is not included in the ps
         self.mon_spike_gr.append(bb.SpikeMonitor(
             self.Pe[self.n_ass * self.s_ass:(self.n_ass + 1) * self.s_ass]
@@ -996,11 +1004,11 @@ class Nets:
         n_stim = 5
         for n in range(num_ps):
             for i in range(n_stim):
-                gr_num = int(self.n_ass / 5. * i)
-                print('stim to ', gr_num)
-                gr = self.p_ass_index[n][gr_num]
+                gr_num_f = int(self.n_ass / 5. * i)
+                print('stim to ', gr_num_f)
+                gr_f = self.p_ass_index[n][gr_num_f]
                 t = (t0 + n + i * 3) * second
-                self.set_noisy_input(gr, t, sigma=0 * ms)
+                self.set_noisy_input(gr_f, t, sigma=0 * ms)
 
         self.balance(10 * second, 5.)
         self.balance(10 * second, 1.)
@@ -1010,7 +1018,7 @@ class Nets:
 
         for n in range(num_ps):
             figure = plt.figure(figsize=(12., 8.))
-            plotter.plot_ps_raster(self, chain_n=n, frac=.01, figure=figure)
+            plotter.plot_ps_raster(self, chain_n=n, frac=.01)
 
     def test_shifts(self, ie, ii, tr):
         self.generate_ps_assemblies('gen_no_overlap')
@@ -1022,10 +1030,10 @@ class Nets:
         self.Isini = ii * pA
         self.network.add(inject)
 
-        gr = self.p_ass_index[0][0]
+        gr_f = self.p_ass_index[0][0]
         for i in range(9):
             t = (21 + i) * second
-            self.set_noisy_input(gr, t, sigma=0 * ms)
+            self.set_noisy_input(gr_f, t, sigma=0 * ms)
 
         self.balance(5 * second, 5.)
         self.balance(5 * second, 1.)
@@ -1036,20 +1044,20 @@ class Nets:
         pr, pf = self.pr_ee, self.pf_ee
 
         figure = plt.figure(figsize=(12., 8.))
-        plotter.plot_ps_raster(self, chain_n=0, frac=.1, figure=figure)
+        plotter.plot_ps_raster(self, chain_n=0, frac=.1)
         # plt.xlim([6800,8300])
 
-    def stim_curr(self, ps=0, gr=0, dur_stim=100, dur_relx=400,
+    def stim_curr(self, ps=0, gr_f=0, dur_stim=100, dur_relx=400,
                   curr=10 * pA):
         """
             stimulate group gr in ps with a continuous current
 
         """
-        for nrn in self.p_ass_index[ps][gr]:
-            self.Pe[nrn].I += curr
+        for nrn_f in self.p_ass_index[ps][gr_f]:
+            self.Pe[nrn_f].I += curr
         self.run_sim(dur_stim * ms)
-        for nrn in self.p_ass_index[ps][gr]:
-            self.Pe[nrn].I -= curr
+        for nrn_f in self.p_ass_index[ps][gr_f]:
+            self.Pe[nrn_f].I -= curr
         self.run_sim(dur_relx * ms)
 
 
@@ -1083,10 +1091,10 @@ def test_symm():
     nn.run_sim(2*second)
     '''
 
-    for gr_num in range(nn_f.n_ass):
-        gr = nn_f.p_ass_index[0][gr_num]
-        t = (20.55 + gr_num * .1) * second
-        nn_f.set_noisy_input(gr, t, sigma=0 * ms)
+    for gr_num_f in range(nn_f.n_ass):
+        gr_f = nn_f.p_ass_index[0][gr_num_f]
+        t = (20.55 + gr_num_f * .1) * second
+        nn_f.set_noisy_input(gr_f, t, sigma=0 * ms)
 
     nn_f.balance(5 * second, 5.)
     nn_f.balance(5 * second, 1.)
@@ -1095,21 +1103,21 @@ def test_symm():
     # nn.run_sim(4*second)
     nn_f.Pe.I -= .0 * pA
 
-    for nrn in nn_f.p_ass_index[0][0]:
-        nn_f.Pe[nrn].I += 3 * pA
+    for nrn_f in nn_f.p_ass_index[0][0]:
+        nn_f.Pe[nrn_f].I += 3 * pA
     nn_f.run_sim(.5 * second)
-    for nrn in nn_f.p_ass_index[0][0]:
-        nn_f.Pe[nrn].I -= 3 * pA
+    for nrn_f in nn_f.p_ass_index[0][0]:
+        nn_f.Pe[nrn_f].I -= 3 * pA
 
     nn_f.Pe.I -= 9 * pA
     nn_f.run_sim(1. * second)
     nn_f.Pe.I += 9 * pA
 
-    for nrn in nn_f.p_ass_index[0][9]:
-        nn_f.Pe[nrn].I += 3 * pA
+    for nrn_f in nn_f.p_ass_index[0][9]:
+        nn_f.Pe[nrn_f].I += 3 * pA
     nn_f.run_sim(.5 * second)
-    for nrn in nn_f.p_ass_index[0][9]:
-        nn_f.Pe[nrn].I -= 3 * pA
+    for nrn_f in nn_f.p_ass_index[0][9]:
+        nn_f.Pe[nrn_f].I -= 3 * pA
 
     plotter.plot_ps_raster(nn_f, chain_n=0, frac=.1)
     plt.xlim([20000, 22000])
@@ -1128,11 +1136,11 @@ def test_fr():
     nn_f.set_spike_monitor()
     nn_f.set_rate_monitor()
 
-    gr = nn_f.p_ass_index[0][0]
+    gr_f = nn_f.p_ass_index[0][0]
     t = 20 * second
-    nn_f.set_noisy_input(gr, t, sigma=0 * ms)
+    nn_f.set_noisy_input(gr_f, t, sigma=0 * ms)
     t = 21 * second
-    nn_f.set_noisy_input(gr, t, sigma=0 * ms)
+    nn_f.set_noisy_input(gr_f, t, sigma=0 * ms)
 
     '''
     nn.balance(.01*second,5.)
@@ -1145,11 +1153,11 @@ def test_fr():
     gr_fr_i = calc_spikes.make_fr_from_spikes(nn_f, ps=0, w=1, exc_nrns=False)
 
     plt.subplot(211)
-    for gr in range(nn_f.n_ass):
-        plt.plot(calc_spikes.gaus_smooth(gr_fr_e[gr], 2))
+    for gr_f in range(nn_f.n_ass):
+        plt.plot(calc_spikes.gaus_smooth(gr_fr_e[gr_f], 2))
     plt.subplot(212)
-    for gr in range(nn_f.n_ass):
-        plt.plot(calc_spikes.gaus_smooth(gr_fr_i[gr], 2))
+    for gr_f in range(nn_f.n_ass):
+        plt.plot(calc_spikes.gaus_smooth(gr_fr_i[gr_f], 2))
 
     plt.show()
 
@@ -1207,12 +1215,12 @@ def test_diff_gff(Ne=20000):
     nn_f.set_voltage_monitor()
     nn_f.set_current_monitor()
 
-    gr = nn_f.p_ass_index[0][0]
+    gr_f = nn_f.p_ass_index[0][0]
 
     t = 21 * second
-    nn_f.set_noisy_input(gr, t, sigma=0 * ms)
+    nn_f.set_noisy_input(gr_f, t, sigma=0 * ms)
     t = 23 * second
-    nn_f.set_noisy_input(gr, t, sigma=0 * ms)
+    nn_f.set_noisy_input(gr_f, t, sigma=0 * ms)
 
     nn_f.mon_spike_e.record = False
     nn_f.mon_spike_i.record = False
@@ -1281,9 +1289,9 @@ def test_longseq():
     nn_f.set_voltage_monitor()
     nn_f.set_current_monitor()
 
-    gr = nn_f.p_ass_index[0][0]
+    gr_f = nn_f.p_ass_index[0][0]
     t = 21 * second
-    nn_f.set_noisy_input(gr, t, sigma=0 * ms, mcoef=30)
+    nn_f.set_noisy_input(gr_f, t, sigma=0 * ms, mcoef=30)
 
     nn_f.mon_spike_e.record = False
     nn_f.mon_spike_i.record = False
@@ -1515,23 +1523,23 @@ def test_boost_pf():
     neur_net.set_voltage_monitor()
     neur_net.set_current_monitor()
 
-    gr = neur_net.p_ass_index[0][0]
+    gr_f = neur_net.p_ass_index[0][0]
 
     t = 19.5 * second
-    neur_net.set_noisy_input(gr, t, sigma=0 * ms)
+    neur_net.set_noisy_input(gr_f, t, sigma=0 * ms)
     t = 20 * second
-    neur_net.set_noisy_input(gr, t, sigma=0 * ms)
+    neur_net.set_noisy_input(gr_f, t, sigma=0 * ms)
     t = 22 * second
-    neur_net.set_noisy_input(gr, t, sigma=0 * ms)
+    neur_net.set_noisy_input(gr_f, t, sigma=0 * ms)
     t = 24 * second
-    neur_net.set_noisy_input(gr, t, sigma=0 * ms)
+    neur_net.set_noisy_input(gr_f, t, sigma=0 * ms)
     t = 26 * second
-    neur_net.set_noisy_input(gr, t, sigma=0 * ms)
+    neur_net.set_noisy_input(gr_f, t, sigma=0 * ms)
     t = 28 * second
-    neur_net.set_noisy_input(gr, t, sigma=0 * ms)
+    neur_net.set_noisy_input(gr_f, t, sigma=0 * ms)
     for i in range(9):
         t = (29 + i) * second
-        neur_net.set_noisy_input(gr, t, sigma=0 * ms)
+        neur_net.set_noisy_input(gr_f, t, sigma=0 * ms)
 
     neur_net.mon_spike_e.record = False
     neur_net.mon_spike_i.record = False
@@ -1588,17 +1596,17 @@ def test_boost_pf_cont():
     nn_f.set_voltage_monitor()
     nn_f.set_current_monitor()
 
-    gr = nn_f.p_ass_index[0][0]
+    gr_f = nn_f.p_ass_index[0][0]
     '''
     '''
     t = 19. * second
-    nn_f.set_noisy_input(gr, t, sigma=0 * ms)
+    nn_f.set_noisy_input(gr_f, t, sigma=0 * ms)
     t = 19.5 * second
 
-    nn_f.set_noisy_input(gr, t, sigma=0 * ms)
+    nn_f.set_noisy_input(gr_f, t, sigma=0 * ms)
     for i in range(9):
         t = (28 + i) * second
-        nn_f.set_noisy_input(gr, t, sigma=0 * ms)
+        nn_f.set_noisy_input(gr_f, t, sigma=0 * ms)
 
     nn_f.mon_spike_e.record = False
     nn_f.mon_spike_i.record = False
@@ -1667,18 +1675,18 @@ def test_slopes():
     nn_f.mon_spike_i.record = True
     nn_f.balance(1 * second, .01)
 
-    for nrn in nn_f.p_ass_index[0][0]:
-        nn_f.Pe[nrn].I += 5 * pA
+    for nrn_f in nn_f.p_ass_index[0][0]:
+        nn_f.Pe[nrn_f].I += 5 * pA
     nn_f.run_sim(.5 * second)
-    for nrn in nn_f.p_ass_index[0][0]:
-        nn_f.Pe[nrn].I -= 5 * pA
+    for nrn_f in nn_f.p_ass_index[0][0]:
+        nn_f.Pe[nrn_f].I -= 5 * pA
     nn_f.run_sim(.5 * second)
 
-    for nrn in nn_f.p_assinh_index[0][0]:
-        nn_f.Pi[nrn].I += 5 * pA
+    for nrn_f in nn_f.p_assinh_index[0][0]:
+        nn_f.Pi[nrn_f].I += 5 * pA
     nn_f.run_sim(.5 * second)
-    for nrn in nn_f.p_assinh_index[0][0]:
-        nn_f.Pi[nrn].I -= 5 * pA
+    for nrn_f in nn_f.p_assinh_index[0][0]:
+        nn_f.Pi[nrn_f].I -= 5 * pA
     nn_f.run_sim(.5 * second)
 
     fe = calc_spikes.make_fr_from_spikes(nn_f, 0, 5, True)[0]
@@ -1724,18 +1732,18 @@ def test_contin(Ne=20000):
     nn_f.set_voltage_monitor()
     nn_f.set_current_monitor()
 
-    gr = nn_f.p_ass_index[0][0]
+    gr_f = nn_f.p_ass_index[0][0]
 
     t = 20 * second
-    nn_f.set_noisy_input(gr, t, sigma=0 * ms)
+    nn_f.set_noisy_input(gr_f, t, sigma=0 * ms)
     t = 21 * second
-    nn_f.set_noisy_input(gr, t, sigma=0 * ms)
+    nn_f.set_noisy_input(gr_f, t, sigma=0 * ms)
     t = 22 * second
-    nn_f.set_noisy_input(gr, t, sigma=0 * ms)
+    nn_f.set_noisy_input(gr_f, t, sigma=0 * ms)
     t = 23 * second
-    nn_f.set_noisy_input(gr, t, sigma=0 * ms)
+    nn_f.set_noisy_input(gr_f, t, sigma=0 * ms)
     t = 24 * second
-    nn_f.set_noisy_input(gr, t, sigma=0 * ms)
+    nn_f.set_noisy_input(gr_f, t, sigma=0 * ms)
 
     nn_f.mon_spike_e.record = False
     nn_f.mon_spike_i.record = False
@@ -1753,44 +1761,56 @@ def test_contin(Ne=20000):
 
 if __name__ == '__main__':
     from matplotlib import pyplot as plt
-    import sys
 
-    nn=Nets(Ne=20000, Ni=5000, cp_ee=.01, cp_ie=.01, cp_ei=0.01, cp_ii=.01,
-        n_ass=444, s_ass=150, pr=.2, pf=.2, synapses_per_nrn=200,
-        #n_ass=10,s_ass=500,pr=.15,pf=.03,symmetric_sequence=True,p_rev=.03,
-        #n_ass=10,s_ass=500,pr=.06,pf=.06,
-        g_ee=0.1*nS, g_ie=0.1*nS, g_ei=0.4*nS, g_ii=0.4*nS)
-    nn.plot_for_raster_curr_volt()
+    nn = Nets(Ne=20000, Ni=5000, cp_ee=.01, cp_ie=.01, cp_ei=0.01, cp_ii=.01,
+              n_ass=10, s_ass=500, pr=.15, pf=.03, symmetric_sequence=True, p_rev=.03,
+              g_ee=0.1 * nS, g_ie=0.1 * nS, g_ei=0.4 * nS, g_ii=0.4 * nS)
 
-    ie= float(sys.argv[1])
-    ii= float(sys.argv[2])
-    tr= float(sys.argv[3])
-    nn.test_shifts(ie,ii,tr)
+    nn.generate_ps_assemblies('gen_no_overlap')
+    nn.set_net_connectivity()
 
-    # ne= int(sys.argv[1])
-    # nn = test_diff_gff(ne)
+    nn.set_spike_monitor()
+    nn.set_rate_monitor()
 
-    # nn = test_psps()
+    for gr_num in range(nn.n_ass):
+        gr = nn.p_ass_index[0][gr_num]
+        t_inp = (20.55 + gr_num * .1) * second
+        nn.set_noisy_input(gr, t_inp, sigma=0 * ms)
 
-    # nn = test_symm()
-    # nn = test_fr()
-    # nn = test_noPS()
+    # gr = nn.p_ass_index[0][9]
+    # t = 22.5*second
+    # nn.set_noisy_input(gr,t,sigma=0*ms)
 
-    # nn = test_diff_gff()
-    # nn = test_longseq()
-    # nn = test_2ASS()
-    # nn = show_ass_frs()
-    # nn = test_tau()
-    # nn = test_boost_pf()
-    # nn = test_slopes()
-    # nn = test_boost_pf_cont()
-    # nn = test_boost_pf()
-    # nn = test_contin()
+    nn.balance(5 * second, 5.)
+    nn.balance(5 * second, 1.)
+    nn.balance(5 * second, .1)
+    nn.balance(5 * second, .01)
+    # nn.run_sim(4*second)
+    nn.Pe.I -= .0 * pA
 
-    nn = show_ass_frs()
+    for nrn in nn.p_ass_index[0][0]:
+        nn.Pe[nrn].I += 3 * pA
+    nn.run_sim(.5 * second)
+    for nrn in nn.p_ass_index[0][0]:
+        nn.Pe[nrn].I -= 3 * pA
 
-    plt.figure()
-    plotter.plot_pop_raster(nn)
-    plt.ylim([0, 12 * nn.s_ass])
-    plt.xlim([22950, 23150])
-    plotter.show()
+    nn.Pe.I -= 9 * pA
+    nn.run_sim(1. * second)
+    nn.Pe.I += 9 * pA
+
+    for nrn in nn.p_ass_index[0][9]:
+        nn.Pe[nrn].I += 3 * pA
+    nn.run_sim(.5 * second)
+    for nrn in nn.p_ass_index[0][9]:
+        nn.Pe[nrn].I -= 3 * pA
+
+    # nn.Pe.I +=.5*pA
+    # nn.Pe.I +=5*pA
+    # nn.run_sim(1.*second)
+
+    # for nrn in nn.p_ass_index[0][0]:
+    # nn.Pe[nrn].I += 1*pA
+    # nn.run_sim(1.*second)
+
+    plotter.plot_ps_raster(nn, chain_n=0, frac=.1)
+    plt.xlim([20000, 22000])

@@ -111,12 +111,12 @@ def get_spike_times_ps(nn, n_ps=0, frac=1., permutate=False, exc_nrns=True,
         if not permutate:
             gr_neurons = gr
             if pick_first:
-                for nrn in gr_neurons[0:frac * len(gr)]:
+                for nrn in gr_neurons[0:int(frac * len(gr))]:
                     for t in mon_spike[nrn]:
                         sp.append((n, t))
                     n += 1
             else:
-                for nrn in gr_neurons[::1 / frac]:
+                for nrn in gr_neurons[::int(1 / frac)]:
                     for t in mon_spike[nrn]:
                         sp.append((n, t))
                     n += 1

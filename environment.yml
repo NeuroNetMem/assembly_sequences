@@ -1,0 +1,14 @@
+name: brian2
+channels:
+  - brian-team
+  - conda-forge
+  - defaults
+dependencies:
+  - brian2=2.2.2.1
+  - brian2tools=0.2.1.1
+  - jupyterlab=1.2.6
+  - notebook=6.0.3
+  - numpy=1.18.1
+  - scipy=1.4.1
+
+

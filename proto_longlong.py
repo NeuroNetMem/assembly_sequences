@@ -990,7 +990,7 @@ class Nets():
 
         for n in range(num_ps):
             figure = plt.figure(figsize=(12., 8.))
-            plotter.plot_ps_raster(self, chain_n=n, frac=.01, figure=figure)
+            plotter.plot_ps_raster(self, chain_n=n, frac=.01)
         #plotter.plot_pop_raster(self,False)
         #plt.xlim([19000,22000])
         #plt.savefig('xxx'+ str(pr)+'_'+str(pf)+'.png')
@@ -1024,7 +1024,7 @@ class Nets():
         pr, pf = self.pr_ee, self.pf_ee
         
         figure = plt.figure(figsize=(12.,8.))
-        plotter.plot_ps_raster(self,chain_n=0,frac=.1,figure=figure)
+        plotter.plot_ps_raster(self, chain_n=0, frac=.1)
         #plt.xlim([6800,8300])
         '''
         plt.title('')

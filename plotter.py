@@ -1,9 +1,9 @@
-from brian2 import ms, mV, pA, second, Hz, siemens, nS
+from brian2 import ms, mV, pA, second, nS
 from matplotlib import pyplot, gridspec
 import matplotlib
 import numpy
 import brian2 as bb
-
+import brian2tools as bbt
 import calc_spikes
 
 from avalan import get_avalanches
@@ -11,9 +11,9 @@ from periodogram import periodogram
 
 
 def get_straightline(figure, sub_e, sub_r, c1x, c1y, c2x, c2y):
-    transFigure = figure.transFigure.inverted()
-    coord1 = transFigure.transform(sub_e.transData.transform([c1x, c1y]))
-    coord2 = transFigure.transform(sub_r.transData.transform([c2x, c2y]))
+    trans_figure = figure.transFigure.inverted()
+    coord1 = trans_figure.transform(sub_e.transData.transform([c1x, c1y]))
+    coord2 = trans_figure.transform(sub_r.transData.transform([c2x, c2y]))
     # noinspection PyUnresolvedReferences
     line = matplotlib.lines.Line2D((coord1[0], coord2[0]),
                                    (coord1[1], coord2[1]), linestyle='--',
@@ -24,23 +24,21 @@ def get_straightline(figure, sub_e, sub_r, c1x, c1y, c2x, c2y):
 def plot_pop_raster(net, plot_inh=False):
     """plot rasterplot of whole E/I populations"""
     pyplot.figure()
-    bb.raster_plot(net.mon_spike_e)
+    bbt.brian_plot(net.mon_spike_e)
     if plot_inh:
         pyplot.figure()
-        bb.raster_plot(net.mon_spike_i)
+        bbt.brian_plot(net.mon_spike_i)
 
 
-def plot_ps_raster(net, chain_n=0, frac=1., permutate=False, figure=0,
-                   dummy_ass=False):
-    '''
+def plot_ps_raster(net, chain_n=0, frac=1., permutate=False, dummy_ass=False):
+    """
         plot a raster of the neurons in the phase sequence chain_n
         frac is the fraction of neurons from each assembly to be plotted.
-    '''
+    """
     a = calc_spikes.get_spike_times_ps(net, chain_n, frac, permutate,
                                        True, dummy_ass)
-    if not figure:
-        figure = pyplot.figure()
-    bb.raster_plot_spiketimes(a)
+    (si, st) = zip(a)
+    bbt.plot_raster(si, st)
     pyplot.title('PS %d neuron firing' % chain_n)
 
 
@@ -81,7 +79,7 @@ def plot_voltage(net, plot_inh=False):
             pyplot.legend(['IN %d' % net.nrn_meas_i[n]])
 
 
-def plot_conductance(net, nrn=0):
+def plot_conductance(net):
     """plot E/I conductances of measured E/I neurons"""
     pyplot.figure()
     for n in range(len(net.nrn_meas_e)):
@@ -106,7 +104,7 @@ def plot_conductance(net, nrn=0):
         pyplot.legend(['IN %d' % net.nrn_meas_i[n]])
 
 
-def plot_currents(net, nrn=0):
+def plot_currents(net):
     """plot E/I current of measured E/I neurons"""
     pyplot.figure()
     for n in range(len(net.nrn_meas_e)):
@@ -134,10 +132,11 @@ def plot_currents(net, nrn=0):
         pyplot.legend(['IN %d' % net.nrn_meas_i[n]])
 
 
-def plot_separatrix(net, t_list=[12, 13], t_pre=.005, t_post=.025, ps=0):
-    '''
+def plot_separatrix(net, t_list=(12, 13), t_pre=.005, t_post=.025):
+    """
         try to plot a separatrix
-    '''
+    """
+
     pyplot.figure()
     for t in t_list:
         a, s = calc_spikes.get_alpha_sigma(net, t, t_pre, t_post)
@@ -146,12 +145,11 @@ def plot_separatrix(net, t_list=[12, 13], t_pre=.005, t_post=.025, ps=0):
     pyplot.ylabel('$\\alpha$ [# spikes]')
 
 
-def plot_separatrix_n(nn, t_list=[12, 13], t_pre=.005, t_post=.025, ps=0,
-                      n_spikes=False):
-    '''
+# noinspection PyUnresolvedReferences
+def plot_separatrix_n(nn, t_pre=.005, t_post=.025, n_spikes=False):
+    """
         try to plot a separatrix
-    '''
-    imp.reload(calc_spikes)
+    """
     figure = pyplot.figure(figsize=(12., 6.))
     gs = gridspec.GridSpec(20, 20)
     gs.update(left=.1, wspace=.05, hspace=.05)
@@ -160,7 +158,6 @@ def plot_separatrix_n(nn, t_list=[12, 13], t_pre=.005, t_post=.025, ps=0,
     xlim = [-.5, 16.5]
     x_ticks = [0, 8, 16]
 
-    y_ticks = [0, .500, 1]
     # y_ticks = [0,100,200,300,400,500,600]
     y_ticks = [0, .1, .2, .3, .4, .5, .6, .7, .8, .9, 1.]
     y_tick_lab = ['0', '', '', '', '', '50', '', '', '', '', '100']
@@ -180,6 +177,7 @@ def plot_separatrix_n(nn, t_list=[12, 13], t_pre=.005, t_post=.025, ps=0,
         for tms_s in tms_sig_l:
             tas_l.append([tms_a[0] + tms_s[0], tms_a[1], tms_s[1]])
     # print tas_l
+    a, s = None, None
     for tas in tas_l:
         # reload(calc_spikes)
         a, s = calc_spikes.get_alpha_sigma(nn, tas[0], t_pre, t_post,
@@ -232,7 +230,8 @@ def remove_spines(ax, xlim, ylim, xticks, yticks, ylabel, legend, keepx=False):
             spine.set_color('none')  # don't draw spine
         elif loc in ['bottom']:
             spine.set_position(('outward', 10))  # outward by 10 points
-            if not keepx: spine.set_color('none')  # don't draw spine
+            if not keepx:
+                spine.set_color('none')  # don't draw spine
         else:
             raise ValueError('unknown spine location: %s' % loc)
 
@@ -241,7 +240,8 @@ def remove_spines(ax, xlim, ylim, xticks, yticks, ylabel, legend, keepx=False):
     pyplot.yticks(yticks)
     pyplot.ylim(ylim)
     pyplot.ylabel(ylabel)
-    if legend != []: pyplot.legend(legend)
+    if legend:
+        pyplot.legend(legend)
 
     ax.xaxis.set_ticks_position('bottom')
     ax.yaxis.set_ticks_position('left')
@@ -255,7 +255,8 @@ def remove_spines_only(ax, keepx=False):
             spine.set_color('none')  # don't draw spine
         elif loc in ['bottom']:
             spine.set_position(('outward', 0))  # outward by 10 points
-            if not keepx: spine.set_color('none')  # don't draw spine
+            if not keepx:
+                spine.set_color('none')  # don't draw spine
         else:
             raise ValueError('unknown spine location: %s' % loc)
 
@@ -263,7 +264,8 @@ def remove_spines_only(ax, keepx=False):
     ax.yaxis.set_ticks_position('left')
 
 
-def plot_rast_V_I_sep(net, nrn=-2, xlim=[16500, 17500]):
+# noinspection PyUnresolvedReferences,PyTypeChecker,PyPep8Naming
+def plot_rast_V_I_sep(net, nrn=-2, xlim=(16500, 17500)):
     """ plots a ratser of a reduced PS,
         conductances, currents, voltage of a neuron in a single figure"""
 
@@ -282,10 +284,9 @@ def plot_rast_V_I_sep(net, nrn=-2, xlim=[16500, 17500]):
     ################################################################
     # sub_rast = pyplot.subplot(gs[0:6,0:12])
     sub_rast = pyplot.subplot(gs[14:20, 1:12])
-    m = bb.Monitor()
-    m.source = []
+    m = bb.SpikeMonitor(source=[])
     m.spikes = calc_spikes.get_spike_times_ps(net, 0, .1)
-    bb.raster_plot(m, color=(0, 0, 0))  # , #showgrouplines=True,
+    bbt.brian_plot(m, color=(0, 0, 0))  # , #showgrouplines=True,
     # spacebetweengroups=0.1, grouplinecol=(0.5, 0.5, 0.5))
 
     # spikes of measured neuron in red o.,
@@ -317,7 +318,6 @@ def plot_rast_V_I_sep(net, nrn=-2, xlim=[16500, 17500]):
     pyplot.text(xlim[0] + 500 - 18, -60, '$\\Uparrow$', size=25)
     # pyplot.text(xlim[0]+500+23,-80,'Stimulation',size=18)
 
-    yticks = [0, 100, 200, 300, 400, 500]
     yticks = [0, 250, 500]
     sub_rast.set_ylabel('', size=20)
     sub_rast.set_yticks(yticks)
@@ -448,8 +448,9 @@ def plot_rast_V_I_sep(net, nrn=-2, xlim=[16500, 17500]):
     pyplot.show()
 
 
-def plot_rast_V_I_disc(net, nrn=-2, xlim0=[19375, 19625],
-                       xlim1=[25625, 26375], xlim2=[38625, 36375], disc_only=False):
+# noinspection PyUnresolvedReferences,PyTypeChecker,PyPep8Naming
+def plot_rast_V_I_disc(net, nrn=-2, xlim0=(19375, 19625),
+                       xlim1=(25625, 26375), disc_only=False):
     """
         For plotting Fig 2
         - plots currents, voltage of a neuron in a single figure
@@ -486,21 +487,17 @@ def plot_rast_V_I_disc(net, nrn=-2, xlim0=[19375, 19625],
     # first tick in second plot in plotting time
     shift_xtick = dx_tick - (xlim0[1] - xlim0[0]) % dx_tick
     # last tick
-    first_xtick = ((xlim0[1] - xlim0[0] + dx_tick) // dx_tick) * dx_tick
-    last_xtick = first_xtick + xlim1[1] - xlim1[0] + 1
     xticks1 = numpy.arange(xlim1[0] + shift_xtick, xlim1[1] + 1, dx_tick)
-    xticks1_lab = numpy.arange(first_xtick, last_xtick, dx_tick)
 
     # xticks=numpy.arange(xlim[0], xlim[1]+1, 200)
     # xticks_lab = numpy.arange(0, xlim[1]-xlim[0]+1, 200)
 
     ################################################################
     sub_rast0 = pyplot.subplot(gs[12:18, 1:4], zorder=subpzorder)
-    m = bb.Monitor()
-    m.source = []
+    m = bb.SpikeMonitor([])
     frac = .1
     m.spikes = calc_spikes.get_spike_times_ps(net, 0, frac)
-    bb.raster_plot(m, color=(0, 0, 0))
+    bbt.brian_plot(m, color=(0, 0, 0))
     # sub_rast0.plot(numpy.array(m.spikes)[:,0],numpy.array(m.spikes)[:,1], '.')
 
     # spikes of measured neuron in red o.,
@@ -528,7 +525,6 @@ def plot_rast_V_I_disc(net, nrn=-2, xlim0=[19375, 19625],
                        (i + 1) * frac * net.s_ass * numpy.ones(xlim0[1] - xlim0[0]),
                        'gray', zorder=1)
 
-    yticks = [0, 2500, 5000]
     yticks = [0, 250, 500]
     sub_rast0.set_ylabel('', size=20)
     sub_rast0.set_yticks(yticks)
@@ -605,6 +601,7 @@ def plot_rast_V_I_disc(net, nrn=-2, xlim0=[19375, 19625],
     sub_rast.plot((-dx1, dx1), (-dy1, +dy1), **kwargs)
 
     ################################################################
+    sub_corr0: pyplot.Subplot
     sub_curr0 = pyplot.subplot(gs[0:5, 1:4], zorder=subpzorder)
     sub_curr0.patch.set_facecolor('None')
 
@@ -780,18 +777,14 @@ def plot_rast_V_I_disc(net, nrn=-2, xlim0=[19375, 19625],
 
     # xticks=numpy.arange(x0, x1+1, 200)
     # xticks_lab = numpy.arange(0, x1-x0+1, 200)
-    xticks = []
 
     # first tick in second plot in plotting time
     shift_xtick = dx_tick - (xlim0[1] - xlim0[0]) % dx_tick
     # last tick
-    first_xtick = ((xlim0[1] - xlim0[0] + dx_tick) // dx_tick) * dx_tick
-    last_xtick = first_xtick + xlim2[1] - xlim2[0] + 1
     xticks2 = numpy.arange(xlim2[0] + shift_xtick, xlim2[1] + 1, dx_tick)
 
     sub_rast20 = pyplot.subplot(gs[20:26, 1:4], zorder=subpzorder)
     draw_evoked_rasta2(fname, '', x0=xlim0[0], x1=xlim0[1])
-    yticks = [0, 100, 200, 300, 400, 500]
     yticks = [0, 250, 500]
     # yticks=[0, 2500, 5000]
     sub_rast20.set_xticks(xticks0)
@@ -879,7 +872,8 @@ def plot_rast_V_I_disc(net, nrn=-2, xlim0=[19375, 19625],
     # pyplot.close()
 
 
-def plot_rast_V_I_contraster(net, nrn=-2, xlim=[16500, 17500]):
+# noinspection PyUnresolvedReferences,PyPep8Naming
+def plot_rast_V_I_contraster(net, nrn=-2, xlim=(16500, 17500)):
     """ 
         For plotting Fig 2
         plots a ratser of a reduced PS,
@@ -888,7 +882,7 @@ def plot_rast_V_I_contraster(net, nrn=-2, xlim=[16500, 17500]):
         puts an extra raster of a continuous sequence replay
         
     """
-    from figure_subplots import draw_evoked_rasta2
+    # from figure_subplots import draw_evoked_rasta2
     tres = .1  # time resolution for conductance
 
     figure = pyplot.figure(figsize=(18., 12.))
@@ -906,10 +900,8 @@ def plot_rast_V_I_contraster(net, nrn=-2, xlim=[16500, 17500]):
 
     sub_rast2 = pyplot.subplot(gs[19:25, 1:12])
 
-    fname = 'contin_ass_pf0.06pr0.06.npz'
-    draw_evoked_rasta2(fname, '', x0=x0, x1=x1)
+    # draw_evoked_rasta2(fname, '', x0=x0, x1=x1)
 
-    yticks = [0, 100, 200, 300, 400, 500]
     yticks = [0, 2500, 5000]
     sub_rast2.set_yticks(yticks)
     sub_rast2.set_yticklabels(yticks, size=20)
@@ -924,7 +916,6 @@ def plot_rast_V_I_contraster(net, nrn=-2, xlim=[16500, 17500]):
 
     ################################################################
     xticks = numpy.arange(xlim[0], xlim[1] + 1, 200)
-    xticks_lab = numpy.arange(0, xlim[1] - xlim[0] + 1, 200)
     cxlim = [xlim[0] / tres, xlim[1] / tres]  # lim for the vectors(with tres in mind)
 
     ################################################################
@@ -960,7 +951,6 @@ def plot_rast_V_I_contraster(net, nrn=-2, xlim=[16500, 17500]):
 
     # put an arrow for the neuron we record from
     # pyplot.text(xlim[0]+500-18, -60, '$\Uparrow$', size=25)
-    yticks = [0, 100, 200, 300, 400, 500]
     yticks = [0, 2500, 5000]
     sub_rast.set_ylabel('', size=20)
     sub_rast.set_yticks(yticks)
@@ -988,6 +978,7 @@ def plot_rast_V_I_contraster(net, nrn=-2, xlim=[16500, 17500]):
     pyplot.plot(net.mon_ecurr_e.times / ms, curr_i, 'b')
     pyplot.plot(net.mon_ecurr_e.times / ms, curr_e + curr_i + curr_leak, 'black')
     ylim = [1.2 * min(curr_mine, curr_mini), 1.2 * max(curr_maxe, curr_maxi)]
+    # noinspection PyTypeChecker
     remove_spines(sub_curr, xlim=xlim, ylim=ylim, xticks=[], yticks=yticks,
                   # ylabel='I [pA]',legend= ['$I_{exc}$','$I_{inh}$'])
                   ylabel='I [pA]', legend=[])
@@ -1035,6 +1026,7 @@ def plot_rast_V_I_contraster(net, nrn=-2, xlim=[16500, 17500]):
     # remove_spines(sub_volt,xlim=xlim,ylim=ylim,
     # xticks=xticks,yticks=yticks,
     # ylabel='V [mV]',legend= [],keepx=True)
+    # noinspection PyTypeChecker
     remove_spines(sub_volt, xlim=xlim, ylim=ylim,
                   xticks=[], yticks=yticks,
                   ylabel='V [mV]', legend=[])
@@ -1059,6 +1051,7 @@ def plot_rast_V_I_contraster(net, nrn=-2, xlim=[16500, 17500]):
     for i in range(len(volt_sp_x)):
         # linii_nekvi.append(get_straightline(figure,sub_rast,sub_volt,
         #        raster_sp_x[i],raster_sp_y[i],volt_sp_x[i],volt_sp_y[i]))
+        # noinspection PyTypeChecker
         linii_nekvi.append(get_straightline(figure, sub_rast, sub_curr,
                                             raster_sp_x[i], raster_sp_y[i], volt_sp_x[i], curr_sp_y))
     '''
@@ -1089,7 +1082,7 @@ def plot_rast_V_I_contraster(net, nrn=-2, xlim=[16500, 17500]):
     pyplot.show()
 
 
-def plot_gj_currents(net, nrn=0):
+def plot_gj_currents(net):
     pyplot.figure()
     for n in range(len(net.nrn_meas_i)):
         pyplot.subplot(len(net.nrn_meas_i), 1, n + 1)
@@ -1104,7 +1097,6 @@ def plot_weights(net):
     """plot histograms of the weights before each balancing"""
     pyplot.figure()
     h_max = numpy.max(numpy.array([max(w) for w in net.weights]))
-    h_min = numpy.min(numpy.array([min(w) for w in net.weights]))
     print('aa', h_max)
     # h_max = net.g_max/siemens
     bins = numpy.linspace(0., h_max, 100)
@@ -1114,24 +1106,21 @@ def plot_weights(net):
 
 
 def plot_gr_fr(net, ch=0, grs='all', wbin=10 * ms):
-    ''' plots the FR of all the assemblies in chain ch '''
-    figure = pyplot.figure(figsize=(16., 12.))
+    """ plots the FR of all the assemblies in chain ch """
     if grs == 'all':
         for gr in range(net.n_ass):
             pyplot.plot(net.mon_rate_gr[ch][gr].smooth_rate(wbin))
 
 
 def plot_gr_fr2(nn, ps=0, wbin=.2, ngroups=None):
-    ''' 
-        plots the FR of all the assemblies in chain ch 
+    """
+        plots the FR of all the assemblies in chain ch
         wbin is bin size in ms
 
-    '''
+    """
 
     frs = calc_spikes.make_fr_from_spikes(nn, ps=ps, w=wbin)
     time = numpy.arange(len(frs[0])) * wbin
-
-    figure = pyplot.figure(figsize=(16., 12.))
 
     if ngroups:
         groups_to_show = ngroups
@@ -1145,16 +1134,16 @@ def plot_gr_fr2(nn, ps=0, wbin=.2, ngroups=None):
     pyplot.ylabel('Firing rate [1/s]')
 
 
-def plot_mean_curr_act(nn, tl, ps=0, gr=0, dur_stim=100, dur_pre=10, wbin=.2,
+def plot_mean_curr_act(nn, tl, ps=0, dur_stim=100, dur_pre=10, wbin=.2,
                        sigma=.5):
-    '''
-       tl is list with time points that a stimulation has been initiated 
+    """
+       tl is list with time points that a stimulation has been initiated
        wbin time resolution in ms
 
-    '''
+    """
     import numpy as np
     frs = calc_spikes.make_fr_from_spikes(nn, ps=ps, w=wbin)
-    mean_fr = np.zeros((dur_stim + dur_pre) / wbin + 1)
+    mean_fr = np.zeros(int((dur_stim + dur_pre) / wbin + 1))
     for t in tl:
         tindex = t / wbin
         mean_fr += frs[0][tindex - dur_pre / wbin - 1: tindex + dur_stim / wbin]
@@ -1167,7 +1156,7 @@ def plot_mean_curr_act(nn, tl, ps=0, gr=0, dur_stim=100, dur_pre=10, wbin=.2,
     return mean_fr
 
 
-def plot_inh_power(net, ch=0, t=0 * second, shift=256, nfft=2048):
+def plot_inh_power(net, t=0 * second, shift=256, nfft=2048):
     [fp, pp] = periodogram(net.mon_rate_i.rate[-t / ms / (net.m_ts / ms):-1],
                            shift, nfft, net.m_ts)
     pyplot.figure()
@@ -1260,6 +1249,7 @@ def plot_fr_cv_syn_distr(nn):
     pyplot.xlabel('Firing rate [spikes/sec]', size=14)
     yticks = [0, .08, .16]
     pyplot.yticks(yticks)
+    # noinspection PyTypeChecker
     remove_spines_only(subp1, True)
 
     subp2 = pyplot.subplot(312)
@@ -1268,6 +1258,7 @@ def plot_fr_cv_syn_distr(nn):
     pyplot.xlabel('Coefficient of variation', size=14)
     yticks = [0, .05, .1]
     pyplot.yticks(yticks)
+    # noinspection PyTypeChecker
     remove_spines_only(subp2, True)
 
     subp3 = pyplot.subplot(313)
@@ -1277,6 +1268,7 @@ def plot_fr_cv_syn_distr(nn):
     pyplot.xlabel('Synchrony', size=14)
     yticks = [0, .3, .6, .9]
     pyplot.yticks(yticks)
+    # noinspection PyTypeChecker
     remove_spines_only(subp3, True)
 
     figure.tight_layout()
