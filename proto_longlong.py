@@ -3,16 +3,12 @@
 
 import numpy as np
 import brian as bb
-from brian import ms, second, Hz, mV, pA, nS, pF
+from brian import ms, second, mV, pA, nS, pF
 #from np.random import rand,binomial
 from time import time, asctime
-import warnings
-import nekvo
-import sys
 
 ### some custom modules
-import plotter
-import calc_spikes
+from assemblyseq import plotter, calc_spikes
 
 ### some brian optimizations
 # import brian_no_units
@@ -1175,15 +1171,15 @@ def test_fr():
     #nn.balance(1*second,.01)
     #nn.run_sim(1*second)
 
-    gr_fr_e = calc_spikes.make_fr_from_spikes(nn,ps=0,w=1,exc_nrns=True)
-    gr_fr_i = calc_spikes.make_fr_from_spikes(nn,ps=0,w=1,exc_nrns=False)
+    gr_fr_e = calc_spikes.make_fr_from_spikes(nn, ps=0, w=1, exc_nrns=True)
+    gr_fr_i = calc_spikes.make_fr_from_spikes(nn, ps=0, w=1, exc_nrns=False)
 
     plt.subplot(211)
     for gr in range(nn.n_ass):
-        plt.plot(calc_spikes.gaus_smooth(gr_fr_e[gr],2))
+        plt.plot(calc_spikes.gaus_smooth(gr_fr_e[gr], 2))
     plt.subplot(212)
     for gr in range(nn.n_ass):
-        plt.plot(calc_spikes.gaus_smooth(gr_fr_i[gr],2))
+        plt.plot(calc_spikes.gaus_smooth(gr_fr_i[gr], 2))
 
     plt.show()
 
@@ -1191,7 +1187,6 @@ def test_fr():
 
 
 def test_noPS():
-    from matplotlib import pyplot as plt
     pr, pf = 0.06, 0.06
     nn=Nets(Ne=20000, Ni=5000, cp_ee=.01, cp_ie=.01, cp_ei=0.01, cp_ii=.01,
         n_chains=0, n_ass=2, s_ass=500, pr=pr, pf=pf,
@@ -1378,7 +1373,7 @@ def test_longseq():
     #plotter.plot_ps_raster(nn, frac=1./150)
 
     fname = 'longseq444.npz'
-    spikes4save = calc_spikes.get_spike_times_ps(nn, frac=1./150)
+    spikes4save = calc_spikes.get_spike_times_ps(nn, frac=1. / 150)
     np.savez_compressed(fname, spikes4save)
 
     return nn
@@ -1572,7 +1567,7 @@ def test_tau():
         tl = 20000 + i*nstim*dur + np.arange(nstim)*dur
         plt.subplot(nsubs, 1, 1+i)
         mfr = plotter.plot_mean_curr_act(nn, tl, dur_stim=dur_stim,
-                                        dur_pre=dur_pre, wbin=wbin)
+                                         dur_pre=dur_pre, wbin=wbin)
         mfrl.append(calc_spikes.gaus_smooth(mfr, w=wbin, sigma=.2))
 
         peak_time = np.argmax(mfrl[-1])*wbin - dur_pre
@@ -1743,8 +1738,8 @@ def test_boost_pf_cont():
     frac = .1
     fname = 'contASS_pr' + str(pr)+ 'pfboost' + str(pf_boost) + \
             'frac' + str(frac) + '.npz'
-    spikes4save = calc_spikes.get_spike_times_ps(nn, 
-                    frac=frac, pick_first=False)
+    spikes4save = calc_spikes.get_spike_times_ps(nn,
+                                                 frac=frac, pick_first=False)
     np.savez_compressed(fname, spikes4save)
 
     return nn

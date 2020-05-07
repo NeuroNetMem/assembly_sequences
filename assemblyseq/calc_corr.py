@@ -79,7 +79,7 @@ def get_ccg(nn, tstim=19.):
 
 
 def get_power(nn, ch=0, t=50 * second, shift=256, nfft=2048):
-    from periodogram import periodogram
+    from assemblyseq.periodogram import periodogram
     [_, pp] = periodogram(nn.rate_Me.rate[-t / ms / (nn.m_ts / ms):-1],
                           shift, nfft, nn.m_ts)
     [_, pg3] = periodogram(nn.mon_rate_Mg[ch][nn.n_ass - 1].rate[-t / ms /

@@ -4,8 +4,7 @@ from brian2 import ms, second, Hz, mV, pA, nS, pF
 from time import time, asctime
 
 # some custom modules
-import plotter
-import calc_spikes
+from assemblyseq import plotter, calc_spikes
 
 g_l = 10. * nS
 C_m = 200 * pF
@@ -213,7 +212,6 @@ class Nets:
         self.inject_some_extra_i = inject_some_extra_i
         self.p_rev = p_rev
         # define variables..needed??
-        self.weights = []
         self.network = None
         self.Pe = None
         self.Pi = None
@@ -261,11 +259,11 @@ class Nets:
 
         # create a couple of groups
         # noinspection PyTypeChecker
-        self.Pe = bb.NeuronGroup(self.Ne, eqs_exc, threshold=-50 * mV,
-                                 reset=-60 * mV, refractory=2. * ms, method='euler')
+        self.Pe = bb.NeuronGroup(self.Ne, eqs_exc, threshold='v > -50 * mV',
+                                 reset='v = -60 * mV', refractory=2. * ms, method='euler')
         # noinspection PyTypeChecker
-        self.Pi = bb.NeuronGroup(self.Ni, eqs_inh, threshold=-50 * mV,
-                                 reset=-60 * mV, refractory=2. * ms, method='euler')
+        self.Pi = bb.NeuronGroup(self.Ni, eqs_inh, threshold='v > -50 * mV',
+                                 reset='v = -60 * mV', refractory=2. * ms, method='euler')
 
         self.Pe.v = (-65 + 15 * np.random.rand(self.Ne)) * mV
         self.Pi.v = (-65 + 15 * np.random.rand(self.Ni)) * mV
@@ -637,7 +635,6 @@ class Nets:
         self.network.add(self.C_ei)
         self.network.add(self.C_ii)
 
-        self.weights.append(self.C_ei.w.data.copy())  # save weights
         print('connections imprinted! ', asctime())
 
     def boost_pff(self, pf_ee_new):
@@ -757,8 +754,6 @@ class Nets:
         t0 = time()
         eta.eta = eta.v * eta_c
         self.network.run(bal_time)
-        # save weights after each balance
-        self.weights.append(self.C_ei.w.data.copy())
         eta.eta = 0.0
         t1 = time()
         print('balanced: ', t1 - t0)
@@ -835,8 +830,9 @@ class Nets:
         # noinspection PyTypeChecker
         ext_in = bb.SpikeGeneratorGroup(1, indices=[0], times=[t0], clock=self.network.clock)
         C_syne = bb.Synapses(ext_in, self.Pe, model='w:siemens', on_pre='ge+=w')
-        for n in target:
-            C_syne.connect(i=0, j=self.Pe[n])
+        # for n in target:
+        #     C_syne.connect(i=0, j=self.Pe[n])
+        C_syne.connect(i=np.zeros_like(target), j=target)
         C_syne.w = mcoef * self.g_ee
         if sigma > 0.:
             C_syne.delay = np.random.normal(6. * sigma, sigma, len(target))

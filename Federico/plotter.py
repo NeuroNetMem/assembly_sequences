@@ -1,13 +1,13 @@
-from brian2 import ms, mV, pA, second, Hz, siemens, nS
+from brian2 import ms, mV, pA, second, nS
 from matplotlib import pyplot, gridspec 
 import matplotlib
 import numpy
 import brian2 as bb
 
-import calc_spikes
+from assemblyseq import calc_spikes
 
-from avalan import get_avalanches
-from periodogram import periodogram
+from assemblyseq.avalan import get_avalanches
+from assemblyseq.periodogram import periodogram
 #from line_with_text import MyLine
 
 ################################################################################
@@ -35,7 +35,7 @@ def plot_ps_raster(net, chain_n=0, frac = 1., permutate=False, figure=0,
         frac is the fraction of neurons from each assembly to be plotted.
     '''
     a = calc_spikes.get_spike_times_ps(net, chain_n, frac, permutate,
-                                        True, dummy_ass)
+                                       True, dummy_ass)
     if not figure:
         figure = pyplot.figure()
     bb.raster_plot_spiketimes(a)
@@ -133,7 +133,7 @@ def plot_separatrix(net,t_list=[12,13],t_pre=.005,t_post=.025,ps=0):
     '''
     pyplot.figure()
     for t in t_list:
-        a,s = calc_spikes.get_alpha_sigma(net,t,t_pre,t_post)
+        a,s = calc_spikes.get_alpha_sigma(net, t, t_pre, t_post)
         pyplot.plot(s,a,'-*')
     pyplot.xlabel('$\\sigma$ [ms]')
     pyplot.ylabel('$\\alpha$ [# spikes]')
@@ -174,8 +174,8 @@ def plot_separatrix_n(nn,t_list=[12,13],t_pre=.005,t_post=.025,ps=0,
     #print tas_l
     for tas in tas_l:
         #reload(calc_spikes)
-        a,s = calc_spikes.get_alpha_sigma(nn,tas[0],t_pre,t_post,
-                                            n_spikes=n_spikes)
+        a,s = calc_spikes.get_alpha_sigma(nn, tas[0], t_pre, t_post,
+                                          n_spikes=n_spikes)
         #print tas,a,s
         #a=a/nn.s_ass
         print(a)
@@ -272,7 +272,7 @@ def plot_rast_V_I_sep(net,nrn=-2,xlim = [16500,17500]):
     sub_rast = pyplot.subplot(gs[14:20,1:12])
     m = bb.Monitor()
     m.source = []
-    m.spikes = calc_spikes.get_spike_times_ps(net,0,.1)
+    m.spikes = calc_spikes.get_spike_times_ps(net, 0, .1)
     bb.raster_plot(m,color=(0,0,0))#, #showgrouplines=True,
                     #spacebetweengroups=0.1, grouplinecol=(0.5, 0.5, 0.5))
 
@@ -1232,9 +1232,9 @@ def show():
 def plot_fr_cv_syn_distr(nn):
     import numpy as np
     t0,t1 = 20,25
-    frs = calc_spikes.get_group_fr_distr(nn,0,9,t0,t1)
-    cvs = calc_spikes.get_group_cv_distr(nn,0,9,t0,t1)
-    syncs = calc_spikes.get_group_synch_distr(nn,0,9,t0,t1)
+    frs = calc_spikes.get_group_fr_distr(nn, 0, 9, t0, t1)
+    cvs = calc_spikes.get_group_cv_distr(nn, 0, 9, t0, t1)
+    syncs = calc_spikes.get_group_synch_distr(nn, 0, 9, t0, t1)
 
     frs = frs[np.isfinite(frs)]
     cvs = cvs[np.isfinite(cvs)]

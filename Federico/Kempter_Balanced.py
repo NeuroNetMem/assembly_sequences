@@ -1,14 +1,10 @@
 import numpy as np
 import brian2 as bb
-from brian2 import ms, second, Hz, mV, pA, nS, pF
+from brian2 import ms, second, mV, pA, nS, pF
 #from np.random import rand,binomial
 from time import time, asctime
-import warnings
-import nekvo
-import sys
 
-import plotter
-import calc_spikes
+from assemblyseq import plotter
 from matplotlib import pyplot as plt
 
 

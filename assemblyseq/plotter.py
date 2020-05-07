@@ -4,10 +4,10 @@ import matplotlib
 import numpy
 import brian2 as bb
 import brian2tools as bbt
-import calc_spikes
+from assemblyseq import calc_spikes
 
-from avalan import get_avalanches
-from periodogram import periodogram
+from assemblyseq.avalan import get_avalanches
+from assemblyseq.periodogram import periodogram
 
 
 def get_straightline(figure, sub_e, sub_r, c1x, c1y, c2x, c2y):

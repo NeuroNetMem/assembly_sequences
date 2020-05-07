@@ -1,6 +1,6 @@
 from matplotlib import pyplot as plt
 import numpy
-import calc_spikes
+from assemblyseq import calc_spikes
 
 dt = .1
 ww = 2.
