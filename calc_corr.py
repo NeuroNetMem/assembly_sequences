@@ -2,9 +2,6 @@ import numpy
 from brian2 import second, ms
 from matplotlib import pyplot
 
-
-# from peakdetect import peakdet
-
 def rec_aver(st, w=.5, dt=.1):
     return numpy.convolve(st, numpy.ones(int((w / dt) / w * 1000.)), 'same')
 

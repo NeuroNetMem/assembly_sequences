@@ -10,7 +10,6 @@ def get_avalanches(rate, delta_0=1, cut_off=30000):
 
     delta = 0
     dur = 0
-    # for i in self.rate_Me.rate[cut_off:]:
     for i in rate[cut_off:]:
         if i:
             s += i

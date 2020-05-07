@@ -2,7 +2,6 @@ import numpy as np
 import brian2 as bb
 from brian2 import ms, second, Hz, mV, pA, nS, pF
 from time import time, asctime
-# from matplotlib import pyplot as plt
 
 # some custom modules
 import plotter
@@ -38,11 +37,6 @@ eqs_inh = '''dv/dt = (g_l*(v_r-v)+Ie+Ii+I)/(C_m) : volt
 eq_stdp = '''dapost/dt = -apost/tau_stdp : 1 (event-driven)
             dapre/dt = -apre/tau_stdp : 1 (event-driven)
             w: siemens '''
-# eq_pre = '''gi+=w
-#             w=clip(w+eta.eta*(apost-alpha)*g_ei,g_min,g_max)
-#             apre+=1 '''
-# eq_post = '''w=clip(w+eta.eta*apre*g_ei,g_min,g_max)
-#             apost+=1 '''
 
 eq_pre = '''gi+=w
             w=clip(w+eta_p*(apost-alpha)*g_ei,g_min,g_max)
@@ -177,7 +171,7 @@ class Nets:
         # neuron groups for spike time measure (for cv and ff)
         if True:
             self.nrngrp_meas = [0, 5, self.n_ass - 1]
-            self.n_spikeM_gr = min(50, int(self.s_ass))
+            self.n_spike_m_gr = min(50, int(self.s_ass))
 
             # temporal recording from ps neurons
             self.nrn_meas_e.append(0 * self.s_ass)
@@ -850,25 +844,6 @@ class Nets:
             C_syne.delay = np.zeros(len(target))
         self.network.add(ext_in, C_syne)
 
-    # # FIX
-    # def attach_dummy_group(self, pf=.06):
-    #     self.dummy_group = bb.NeuronGroup(500, eqs_exc, threshold='v>-50*mV',
-    #                                       reset='v=-60*mV', refractory=2. * ms)
-    #     self.C_ed = bb.Synapses(self.dummy_group, self.Pe,
-    #                             model='w:siemens', pre='ge+=w')
-    #     self.C_ed = bb.Synapses(self.dummy_group, self.Pe,
-    #                             model='w:siemens', on_pre='ge+=w')
-    #     for p1 in self.dummy_group:
-    #         for p2 in p_index[n_gr + 1]:
-    #             if np.random.random() < nn.pf_ee:
-    #                 self.C_ed[p1, p2] = True
-    #
-    #     print('hui')
-    #     # nn.C_ed.connect_random(nn.dummy_group,nn.p_ass_index[0][0],sparseness=pf)
-    #     self.C_ed.w = self.g_ee
-    #     self.C_ed.delay = self.D
-    #     self.network.add(self.dummy_group, self.C_ed)
-
     def set_rate_monitor(self):
         """yep"""
         self.mon_rate_e = bb.PopulationRateMonitor(self.Pe)
@@ -895,11 +870,11 @@ class Nets:
         self.mon_spike_gr = []  # measure spike times from groups (for CV and FF)
         for gr_f in self.nrngrp_meas:
             self.mon_spike_gr.append(bb.SpikeMonitor(
-                self.p_ass[ch][gr_f][0:self.n_spikeM_gr]))
+                self.p_ass[ch][gr_f][0:self.n_spike_m_gr]))
         # also control group of neurons which is not included in the ps
         self.mon_spike_gr.append(bb.SpikeMonitor(
             self.Pe[self.n_ass * self.s_ass:(self.n_ass + 1) * self.s_ass]
-            [0:self.n_spikeM_gr]))
+            [0:self.n_spike_m_gr]))
         self.network.add(self.mon_spike_gr)
         # default spike easure is off
         for sp in self.mon_spike_gr:
@@ -1017,7 +992,7 @@ class Nets:
         self.run_sim(16 * second)
 
         for n in range(num_ps):
-            figure = plt.figure(figsize=(12., 8.))
+            plt.figure(figsize=(12., 8.))
             plotter.plot_ps_raster(self, chain_n=n, frac=.01)
 
     def test_shifts(self, ie, ii, tr):
@@ -1043,7 +1018,7 @@ class Nets:
 
         pr, pf = self.pr_ee, self.pf_ee
 
-        figure = plt.figure(figsize=(12., 8.))
+        plt.figure(figsize=(12., 8.))
         plotter.plot_ps_raster(self, chain_n=0, frac=.1)
         # plt.xlim([6800,8300])
 
@@ -1776,10 +1751,6 @@ if __name__ == '__main__':
         gr = nn.p_ass_index[0][gr_num]
         t_inp = (20.55 + gr_num * .1) * second
         nn.set_noisy_input(gr, t_inp, sigma=0 * ms)
-
-    # gr = nn.p_ass_index[0][9]
-    # t = 22.5*second
-    # nn.set_noisy_input(gr,t,sigma=0*ms)
 
     nn.balance(5 * second, 5.)
     nn.balance(5 * second, 1.)
