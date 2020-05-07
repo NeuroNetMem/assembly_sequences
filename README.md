@@ -8,7 +8,20 @@ Currently targeting:
   - numpy=1.18.1
   - python=3.6.10
 
+## Install instructions 
 
+create `brian2` conda environment with 
+```
+conda env create -f environment.yml 
+conda activate brian2
+```
+From a Mac you can get the literal configuration I'm on by using `environment_mac.yml` instead.
+
+You can then install the package probably with 
+
+```
+python setup.py develop
+```
 
 ### Old README
 This code reproduces some results from the paper:
