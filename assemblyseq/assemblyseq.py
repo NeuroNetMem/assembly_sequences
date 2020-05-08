@@ -37,7 +37,7 @@ eq_stdp = '''dapost/dt = -apost/tau_stdp : 1 (event-driven)
             dapre/dt = -apre/tau_stdp : 1 (event-driven)
             w: siemens '''
 
-eq_pre = '''gi+=w
+eq_pre = '''gi_post+=w
             w=clip(w+eta_p*(apost-alpha)*g_ei,g_min,g_max)
             apre+=1'''
 eq_post = '''w=clip(w+eta_p*apre*g_ei,g_min,g_max)
@@ -163,7 +163,7 @@ class Nets:
 
         self.sh_e = 0
         self.sh_i = 0
-        ########################################################################
+
         # neurons and groups to measure from
         self.nrn_meas_e = []
         self.nrn_meas_i = []
@@ -274,11 +274,8 @@ class Nets:
 
         if self.type_ext_input == 'curr':
             self.set_in_curr([self.Pe, self.Pi])
-        elif self.type_ext_input == 'pois':
-            # apparently now works only with curr
-            self.set_in_curr([self.Pe, self.Pi])
         else:
-            print('no input, sure about it?')
+            raise NotImplementedError('no input, sure about it?')
 
         self.C_ee = bb.Synapses(self.Pe, self.Pe, model='w:siemens', on_pre='ge+=w')
         self.C_ie = bb.Synapses(self.Pe, self.Pi, model='w:siemens', on_pre='ge+=w')
@@ -291,7 +288,71 @@ class Nets:
                                     namespace=namespace)
         else:
             self.C_ei = bb.Synapses(self.Pi, self.Pe,
-                                    model='w:siemens', on_pre='gi+=w')
+                                    model='w:siemens', on_pre='gi_post+=w')
+
+    def gen_ordered(self):
+        """
+            Generate n assemblies where neurons are ordered
+            sh_e, sh_i : shift of e/i neurons (by default order starts at 0)
+        """
+        if self.n_chains:
+            self.sh_e += self.s_ass * self.n_ass
+            self.sh_i += self.s_assinh * self.n_ass
+        nrn_e = np.arange(self.sh_e, self.Ne)
+        nrn_i = np.arange(self.sh_i, self.Ni)
+        p_ind_e = [nrn_e[n * self.s_ass:(n + 1) * self.s_ass] for n in range(self.n_ass)]
+        p_ind_i = [nrn_i[n * self.s_assinh:(n + 1) * self.s_assinh] for n in range(self.n_ass)]
+        print('An ordered sequence is created')
+        return p_ind_e, p_ind_i
+
+    def gen_no_overlap(self):
+        """
+            Generate n assemblies with random neurons
+            no repetition of a neuron is allowed
+        """
+        nrn_perm_e = np.random.permutation(self.Ne)
+        nrn_perm_i = np.random.permutation(self.Ni)
+        p_ind_e = [nrn_perm_e[n * self.s_ass:(n + 1) * self.s_ass] for n in range(self.n_ass)]
+        p_ind_i = [nrn_perm_i[n * self.s_assinh:(n + 1) * self.s_assinh] for n in range(self.n_ass)]
+        print('A random sequence without overlaps is created')
+        return p_ind_e, p_ind_i
+
+    def gen_ass_overlap(self):
+        """
+            Generate a n assemblies with random neurons
+            repetitions of a neuron in different groups is allowed
+        """
+        # permutate and pick the first s_ass elements..
+        p_ind_e = [np.random.permutation(self.Ne)[:self.s_ass]
+                   for _ in range(self.n_ass)]
+        p_ind_i = [np.random.permutation(self.Ni)[:self.s_assinh]
+                   for _ in range(self.n_ass)]
+        print('A random sequence without repetition in a group is created')
+        return p_ind_e, p_ind_i
+
+    def gen_random(self):
+        """
+            Generate a n assemblies with random neurons, repetitions in a
+            group are allowed
+        """
+        p_ind_e = np.random.randint(self.Ne, size=(self.n_ass, self.s_ass))
+        p_ind_i = np.random.randint(self.Ni, size=(self.n_ass, self.s_assinh))
+        print('A sequence with completely random neurons is created')
+        return p_ind_e, p_ind_i
+
+    def gen_dummy(self, p_ind_e_out):
+        dum = []
+        indexes_flatten = np.array(p_ind_e_out).flatten()
+        # not to generate a random number for each neurons
+        permutated_numbers = np.random.permutation(self.Ne)
+        dum_size = 0
+        for nrn_f in permutated_numbers:
+            if nrn_f not in indexes_flatten:
+                dum.append(nrn_f)
+                dum_size += 1
+                if dum_size >= self.s_ass:
+                    break
+        return dum
 
     def generate_ps_assemblies(self, ass_randomness='gen_no_overlap'):
         """
@@ -304,77 +365,10 @@ class Nets:
                     gen_random      : totally random choise of neurons
 
         """
-
-        def gen_ordered():
-            """
-                Generate n assemblies where neurons are ordered
-                sh_e, sh_i : shift of e/i neurons (by default order starts at 0)
-            """
-            if self.n_chains:
-                self.sh_e += sa_e * self.n_ass
-                self.sh_i += sa_i * self.n_ass
-            nrn_e = np.arange(self.sh_e, self.Ne)
-            nrn_i = np.arange(self.sh_i, self.Ni)
-            p_ind_e = [nrn_e[n * sa_e:(n + 1) * sa_e] for n in range(self.n_ass)]
-            p_ind_i = [nrn_i[n * sa_i:(n + 1) * sa_i] for n in range(self.n_ass)]
-            print('An ordered sequence is created')
-            return p_ind_e, p_ind_i
-
-        def gen_no_overlap():
-            """
-                Generate n assemblies with random neurons
-                no repetition of a neuron is allowed
-            """
-            nrn_perm_e = np.random.permutation(self.Ne)
-            nrn_perm_i = np.random.permutation(self.Ni)
-            p_ind_e = [nrn_perm_e[n * sa_e:(n + 1) * sa_e] for n in range(self.n_ass)]
-            p_ind_i = [nrn_perm_i[n * sa_i:(n + 1) * sa_i] for n in range(self.n_ass)]
-            print('A random sequence without overlaps is created')
-            return p_ind_e, p_ind_i
-
-        def gen_ass_overlap():
-            """
-                Generate a n assemblies with random neurons
-                repetitions of a neuron in different groups is allowed
-            """
-            # permutate and pick the first s_ass elements..
-            p_ind_e = [np.random.permutation(self.Ne)[:sa_e]
-                       for _ in range(self.n_ass)]
-            p_ind_i = [np.random.permutation(self.Ni)[:sa_i]
-                       for _ in range(self.n_ass)]
-            print('A random sequence without repetition in a group is created')
-            return p_ind_e, p_ind_i
-
-        def gen_random():
-            """
-                Generate a n assemblies with random neurons, repetitions in a
-                group are allowed
-            """
-            p_ind_e = np.random.randint(self.Ne, size=(self.n_ass, sa_e))
-            p_ind_i = np.random.randint(self.Ni, size=(self.n_ass, sa_i))
-            print('A sequence with completely random neurons is created')
-            return p_ind_e, p_ind_i
-
-        def gen_dummy():
-            dum = []
-            indexes_flatten = np.array(p_ind_e_out).flatten()
-            # not to generate a random number for each neurons
-            permutated_numbers = np.random.permutation(self.Ne)
-            dum_size = 0
-            for nrn_f in permutated_numbers:
-                if nrn_f not in indexes_flatten:
-                    dum.append(nrn_f)
-                    dum_size += 1
-                    if dum_size >= self.s_ass:
-                        break
-            return dum
-
-        sa_e, sa_i = self.s_ass, self.s_assinh  # to use shorter names
-
-        p_ind_e_out, p_ind_i_out = eval(ass_randomness)()
+        p_ind_e_out, p_ind_i_out = eval("self." + ass_randomness)()
         self.p_ass_index.append(p_ind_e_out)
         self.p_assinh_index.append(p_ind_i_out)
-        self.dummy_ass_index.append(gen_dummy())
+        self.dummy_ass_index.append(self.gen_dummy(p_ind_e_out))
         self.n_chains += 1
 
     def set_net_connectivity(self):
@@ -830,8 +824,7 @@ class Nets:
         # noinspection PyTypeChecker
         ext_in = bb.SpikeGeneratorGroup(1, indices=[0], times=[t0], clock=self.network.clock)
         C_syne = bb.Synapses(ext_in, self.Pe, model='w:siemens', on_pre='ge+=w')
-        # for n in target:
-        #     C_syne.connect(i=0, j=self.Pe[n])
+
         C_syne.connect(i=np.zeros_like(target), j=target)
         C_syne.w = mcoef * self.g_ee
         if sigma > 0.:
@@ -1771,13 +1764,6 @@ if __name__ == '__main__':
     for nrn in nn.p_ass_index[0][9]:
         nn.Pe[nrn].I -= 3 * pA
 
-    # nn.Pe.I +=.5*pA
-    # nn.Pe.I +=5*pA
-    # nn.run_sim(1.*second)
-
-    # for nrn in nn.p_ass_index[0][0]:
-    # nn.Pe[nrn].I += 1*pA
-    # nn.run_sim(1.*second)
 
     plotter.plot_ps_raster(nn, chain_n=0, frac=.1)
     plt.xlim([20000, 22000])
