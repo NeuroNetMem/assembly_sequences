@@ -37,7 +37,7 @@ def plot_ps_raster(net, chain_n=0, frac=1., permutate=False, dummy_ass=False):
     """
     a = calc_spikes.get_spike_times_ps(net, chain_n, frac, permutate,
                                        True, dummy_ass)
-    (si, st) = zip(a)
+    (si, st) = zip(*a)
     bbt.plot_raster(si, st)
     pyplot.title('PS %d neuron firing' % chain_n)
 
