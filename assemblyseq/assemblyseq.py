@@ -220,6 +220,10 @@ class Nets:
         self.C_ei = None
         self.C_ii = None
 
+        self.cee = None
+        self.cie = None
+        self.cei = None
+        self.cii = None
         self.mon_rate_e = None
         self.mon_rate_i = None
 
@@ -371,250 +375,242 @@ class Nets:
         self.dummy_ass_index.append(self.gen_dummy(p_ind_e_out))
         self.n_chains += 1
 
-    def set_net_connectivity(self):
-        """sets connections in the network"""
+    def create_random_matrix(self, pre_nrns, post_nrns, p, pre_is_post=True):
+        """
+            creates random connections between 2 populations of size
+            pre_nrns and post_nrns (population sizes)
+            might be slow but allows us to edit the connectivity matrix
+            before throwing it into the ruthless synapse class
+            ith element consists of the postsynaptic connection of ith nrn
+            pre_is_post : flag that prevents a neuron to connect to itself
+                if set to True
+        """
+        conn_mat = []
+        for i in range(pre_nrns):
+            conn_nrn = list(np.arange(post_nrns)
+                            [np.random.random(post_nrns) < p])
+            if i in conn_nrn and pre_is_post:  # no autosynapses
+                conn_nrn.remove(i)
+            conn_mat.append(conn_nrn)
+        return conn_mat
 
-        def create_random_matrix(pre_nrns, post_nrns, p, pre_is_post=True):
-            """
-                creates random connections between 2 populations of size
-                pre_nrns and post_nrns (population sizes)
-                might be slow but allows us to edit the connectivity matrix
-                before throwing it into the ruthless synapse class
-                ith element consists of the postsynaptic connection of ith nrn
-                pre_is_post : flag that prevents a neuron to connect to itself
-                    if set to True
-            """
-            conn_mat = []
-            for i in range(pre_nrns):
-                conn_nrn = list(np.arange(post_nrns)
-                                [np.random.random(post_nrns) < p])
-                if i in conn_nrn and pre_is_post:  # no autosynapses
-                    conn_nrn.remove(i)
-                conn_mat.append(conn_nrn)
-            return conn_mat
+    def make_connections_discrete(self):
+        for n_ch in range(self.n_chains):  # iterate over sequences
+            p_index = self.p_ass_index[n_ch]
+            p_indexinh = self.p_assinh_index[n_ch]
+            # iterate over the assemblies in the PS
+            for n_gr in range(len(p_indexinh)):
+                # iterate over E neurons in a group
+                for p1 in p_index[n_gr]:
+                    # E to E recurrent
+                    p1_post = list(p_index[n_gr][
+                                       np.random.random(len(p_index[n_gr])) < self.pr_ee])
+                    if p1 in p1_post:  # no autosynapse
+                        p1_post.remove(p1)
+                    # if remove_old_conn_flag_ee:
+                    #     cee[p1] = cee[p1][len(p1_post):]
+                    #     if p1 < 5:
+                    #         print(n_gr, p1, len(p1_post))
+                    self.cee[p1].extend(p1_post)
+                    # E to E feedforward
+                    if n_gr < self.n_ass - 1:  # in case it's the last group
+                        ###################################################
+                        # flag for using the random connections for ff
+                        # instead of embedding new ff synapses, strengthen
+                        # the background connections proportionally
+                        use_random_conn_ff = False
+                        if use_random_conn_ff:
+                            p1_post = np.intersect1d(self.cee[p1],
+                                                     p_index[n_gr + 1])
+                            for _ in range(int(self.pf_ee / self.cp_ee)):
+                                # noinspection PyTypeChecker
+                                self.cee[p1].extend(p1_post)  # FIX
+                            # check for postsynaptic partners of p1 in cee
+                            # do the same synapses pff/r_rand times?
+                        else:
+                            for _ in range(self.g_ff_coef):
+                                p1_post = list(p_index[n_gr + 1]
+                                               [np.random.random(len(p_index[n_gr + 1]))
+                                                < self.pf_ee])
+                                if p1 in p1_post:  # no autosynapse
+                                    p1_post.remove(p1)
 
-        def make_connections_discrete():
-            for n_ch in range(self.n_chains):  # iterate over sequences
-                p_index = self.p_ass_index[n_ch]
-                p_indexinh = self.p_assinh_index[n_ch]
-                # iterate over the assemblies in the PS
-                for n_gr in range(len(p_indexinh)):
-                    # iterate over E neurons in a group
-                    for p1 in p_index[n_gr]:
-                        # E to E recurrent
-                        p1_post = list(p_index[n_gr][
-                                           np.random.random(len(p_index[n_gr])) < self.pr_ee])
+                                self.cee[p1].extend(p1_post)
+                    # E to E reverse
+                    if self.symmetric_sequence and n_gr:
+                        p1_post = list(p_index[n_gr - 1][
+                                           np.random.random(len(p_index[n_gr - 1])) <
+                                           self.p_rev])
                         if p1 in p1_post:  # no autosynapse
                             p1_post.remove(p1)
-                        if remove_old_conn_flag_ee:
-                            cee[p1] = cee[p1][len(p1_post):]
-                            if p1 < 5:
-                                print(n_gr, p1, len(p1_post))
-                        cee[p1].extend(p1_post)
-                        # E to E feedforward
-                        if n_gr < self.n_ass - 1:  # in case it's the last group
-                            ###################################################
-                            # flag for using the random connections for ff
-                            # instead of embedding new ff synapses, strengthen
-                            # the background connections proportionally
-                            use_random_conn_ff = False
-                            if use_random_conn_ff:
-                                p1_post = np.intersect1d(cee[p1],
-                                                         p_index[n_gr + 1])
-                                for _ in range(int(self.pf_ee / self.cp_ee)):
-                                    # noinspection PyTypeChecker
-                                    cee[p1].extend(p1_post)  # FIX
-                                # check for postsynaptic partners of p1 in cee
-                                # do the same synapses pff/r_rand times?
-                            else:
-                                for _ in range(self.g_ff_coef):
-                                    p1_post = list(p_index[n_gr + 1]
-                                                   [np.random.random(len(p_index[n_gr + 1]))
-                                                    < self.pf_ee])
-                                    if p1 in p1_post:  # no autosynapse
-                                        p1_post.remove(p1)
-                                    if remove_old_conn_flag_ee:
-                                        cee[p1] = cee[p1][len(p1_post):]
-                                        if p1 < 5:
-                                            print(n_gr, p1, len(p1_post))
-                                    cee[p1].extend(p1_post)
-                        # E to E reverse
-                        if self.symmetric_sequence and n_gr:
-                            p1_post = list(p_index[n_gr - 1][
-                                               np.random.random(len(p_index[n_gr - 1])) <
-                                               self.p_rev])
-                            if p1 in p1_post:  # no autosynapse
-                                p1_post.remove(p1)
-                            if remove_old_conn_flag_ee:
-                                cee[p1] = cee[p1][len(p1_post):]
-                            cee[p1].extend(p1_post)
-                        # E to I recurrent
-                        p1_post = list(p_indexinh[n_gr][
-                                           np.random.random(len(p_indexinh[n_gr])) < self.pr_ie])
-                        if remove_old_conn_flag:
-                            cie[p1] = cie[p1][len(p1_post):]
-                        cie[p1].extend(p1_post)
-                    for i1 in p_indexinh[n_gr]:
-                        # I to I recurrent
-                        i1_post = list(p_indexinh[n_gr][
-                                           np.random.random(len(p_indexinh[n_gr])) < self.pr_ii])
-                        # np.random.random(len(p_indexinh[n_gr]))<pr_ii])
-                        if i1 in i1_post:  # no autosynapse
-                            i1_post.remove(i1)
-                        if remove_old_conn_flag:
-                            cii[i1] = cii[i1][len(i1_post):]
-                        cii[i1].extend(i1_post)
-                        '''
-                        '''
-                        # I to E recurrent
-                        i1_post = list(p_index[n_gr][
-                                           np.random.random(len(p_index[n_gr])) < self.pr_ei])
-                        if remove_old_conn_flag:
-                            cei[i1] = cei[i1][len(i1_post):]
-                        cei[i1].extend(i1_post)
-            return cee, cie, cie, cii
 
-        def make_connections_continuous():
-            def find_post(p_ind, ix, ran_be_cont, ran_af_cont, pr):
-                """
-                    hw stands for half width (M/2) normally 250 neurons
-                    range variables specify the range of connectivity from
-                    neuron i,i.e., to how many neurons will neuron i project
-                        ran_be: range before neuron
-                        ran_af: range after
+                    # E to I recurrent
+                    p1_post = list(p_indexinh[n_gr][
+                                       np.random.random(len(p_indexinh[n_gr])) < self.pr_ie])
 
-                """
-                # rns from first group will have higher rc connection to 
-                # the following half group
-                if ix < ran_be_cont:
-                    pr_n = (ran_be_cont + ran_af_cont) / (ran_af_cont + ix) * pr
-                    p1_post_f = p_ind[0:ix + ran_af_cont][
-                        np.random.random(ix + ran_af_cont) < pr_n]
-                # last neurons also need some special care to connect
-                elif ix > len(p_ind) - ran_af_cont:
-                    pr_n = pr * (ran_be_cont + ran_af_cont) / (ran_af_cont + len(p_ind) - ix - 1)
-                    p1_post_f = p_ind[ix - ran_be_cont:][
-                        np.random.random(len(p_ind) - ix + ran_be_cont) < pr_n]
-                    print('aa', len(p_ind), ix, ran_be_cont, ran_af_cont, pr_n)
-                    print(len(p_ind[ix - ran_be_cont:]), len(p_ind) - ix + ran_be_cont)
-                # most neurons are happy
+                    self.cie[p1].extend(p1_post)
+                for i1 in p_indexinh[n_gr]:
+                    # I to I recurrent
+                    i1_post = list(p_indexinh[n_gr][
+                                       np.random.random(len(p_indexinh[n_gr])) < self.pr_ii])
+                    # np.random.random(len(p_indexinh[n_gr]))<pr_ii])
+                    if i1 in i1_post:  # no autosynapse
+                        i1_post.remove(i1)
+
+                    self.cii[i1].extend(i1_post)
+
+                    # I to E recurrent
+                    i1_post = list(p_index[n_gr][
+                                       np.random.random(len(p_index[n_gr])) < self.pr_ei])
+
+                    self.cei[i1].extend(i1_post)
+
+    @staticmethod
+    def find_post(p_ind, ix, ran_be_cont, ran_af_cont, pr):
+        """
+            hw stands for half width (M/2) normally 250 neurons
+            range variables specify the range of connectivity from
+            neuron i,i.e., to how many neurons will neuron i project
+                ran_be: range before neuron
+                ran_af: range after
+
+        """
+        # rns from first group will have higher rc connection to
+        # the following half group
+        if ix < ran_be_cont:
+            pr_n = (ran_be_cont + ran_af_cont) / (ran_af_cont + ix) * pr
+            p1_post_f = p_ind[0:ix + ran_af_cont][
+                np.random.random(ix + ran_af_cont) < pr_n]
+        # last neurons also need some special care to connect
+        elif ix > len(p_ind) - ran_af_cont:
+            pr_n = pr * (ran_be_cont + ran_af_cont) / (ran_af_cont + len(p_ind) - ix - 1)
+            p1_post_f = p_ind[ix - ran_be_cont:][
+                np.random.random(len(p_ind) - ix + ran_be_cont) < pr_n]
+            print('aa', len(p_ind), ix, ran_be_cont, ran_af_cont, pr_n)
+            print(len(p_ind[ix - ran_be_cont:]), len(p_ind) - ix + ran_be_cont)
+        # most neurons are happy
+        else:
+            pr_n = pr
+            p1_post_f = p_ind[ix - ran_be_cont:ix + ran_af_cont][
+                np.random.random(ran_be_cont + ran_af_cont) < pr_n]
+        return p1_post_f
+
+    def make_connections_continuous(self):
+
+
+        for n_ch in range(self.n_chains):  # iterate over sequences
+            p_index = np.array(self.p_ass_index[n_ch]).flatten()
+            p_indexinh = np.array(self.p_assinh_index[n_ch]).flatten()
+            ran_be = 1 * self.s_ass / 2  # here positive means before..to fix!
+            ran_af = 1 * self.s_ass / 2
+            ran_be_i = self.s_assinh / 2 + 1
+            ran_af_i = self.s_assinh / 2 + 1
+            if self.modified_contin:
+                ran_ff_start = 1 * self.s_ass / 2
+                ran_ff_end = 3 * self.s_ass / 2
+            else:
+                raise NotImplementedError("must define ran_ff_end")
+            # iterate over the assemblies in the PS
+            for i, p1 in enumerate(p_index):
+                # E-to-E recurrent
+                p1_post = self.find_post(p_index, i, ran_be, ran_af, self.pr_ee)
+                # if p1 in p1_post: # no autosynapse
+                # p1_post = list(p1_post).remove(p1)
+                self.cee[p1].extend(p1_post)
+
+                # E-to-I recurrent
+                p1_post = self.find_post(p_indexinh, i / 4, ran_be_i, ran_af_i,
+                                    self.pr_ie)
+                self.cie[p1].extend(p1_post)
+
+                # E-to-E feedforward
+                if i < len(p_index) - ran_ff_end:
+                    p1_post = p_index[i + ran_ff_start:i + ran_ff_end][
+                        np.random.random(ran_ff_end - ran_ff_start)
+                        < self.pf_ee]
+                # here not to miss connections to the last group
                 else:
-                    pr_n = pr
-                    p1_post_f = p_ind[ix - ran_be_cont:ix + ran_af_cont][
-                        np.random.random(ran_be_cont + ran_af_cont) < pr_n]
-                return p1_post_f
+                    p1_post = p_index[i:len(p_index)][
+                        np.random.random(len(p_index) - i) < self.pf_ee]
+                self.cee[p1].extend(p1_post)
 
-            for n_ch in range(self.n_chains):  # iterate over sequences
-                p_index = np.array(self.p_ass_index[n_ch]).flatten()
-                p_indexinh = np.array(self.p_assinh_index[n_ch]).flatten()
-                ran_be = 1 * self.s_ass / 2  # here positive means before..to fix!
-                ran_af = 1 * self.s_ass / 2
-                ran_be_i = self.s_assinh / 2 + 1
-                ran_af_i = self.s_assinh / 2 + 1
-                if self.modified_contin:
-                    ran_ff_start = 1 * self.s_ass / 2
-                    ran_ff_end = 3 * self.s_ass / 2
-                else:
-                    raise NotImplementedError("must define ran_ff_end")
-                # iterate over the assemblies in the PS
-                for i, p1 in enumerate(p_index):
-                    # E-to-E recurrent
-                    p1_post = find_post(p_index, i, ran_be, ran_af, self.pr_ee)
-                    # if p1 in p1_post: # no autosynapse
-                    # p1_post = list(p1_post).remove(p1)
-                    cee[p1].extend(p1_post)
+            for i, i1 in enumerate(p_indexinh):
+                # I-to-E recurrent
+                i1_post = self.find_post(p_index, 4 * i,
+                                    ran_be, ran_af, self.pr_ei)
+                self.cei[i1].extend(i1_post)
 
-                    # E-to-I recurrent
-                    p1_post = find_post(p_indexinh, i / 4, ran_be_i, ran_af_i,
-                                        self.pr_ie)
-                    cie[p1].extend(p1_post)
+                # I-to-I recurrent
+                i1_post = self.find_post(p_indexinh, i, ran_be_i, ran_af_i,
+                                    self.pr_ii)
+                # if i1 in i1_post: # no autosynapse
+                # i1_post = list(i1_post).remove(i1)
+                self.cii[i1].extend(i1_post)
 
-                    # E-to-E feedforward
-                    if i < len(p_index) - ran_ff_end:
-                        p1_post = p_index[i + ran_ff_start:i + ran_ff_end][
-                            np.random.random(ran_ff_end - ran_ff_start)
-                            < self.pf_ee]
-                    # here not to miss connections to the last group 
-                    else:
-                        p1_post = p_index[i:len(p_index)][
-                            np.random.random(len(p_index) - i) < self.pf_ee]
-                    cee[p1].extend(p1_post)
+    def apply_connection_matrix(self, S, conn_mat, f_ee=False):
+        """
+            creates the synapses by applying conn_mat connectivity matrix
+            to the synaptic class S
+            basically does the following but fast!
 
-                for i, i1 in enumerate(p_indexinh):
-                    # I-to-E recurrent
-                    i1_post = find_post(p_index, 4 * i,
-                                        ran_be, ran_af, self.pr_ei)
-                    cei[i1].extend(i1_post)
+            for i, conn_nrn in enumerate(conn_mat):
+                for j in conn_nrn:
+                    S[i,j]=True
 
-                    # I-to-I recurrent
-                    i1_post = find_post(p_indexinh, i, ran_be_i, ran_af_i,
-                                        self.pr_ii)
-                    # if i1 in i1_post: # no autosynapse
-                    # i1_post = list(i1_post).remove(i1)
-                    cii[i1].extend(i1_post)
+            f_ee is a flag indicating e-e connections
 
-        def apply_connection_matrix(S, conn_mat, f_ee=False):
-            """
-                creates the synapses by applying conn_mat connectivity matrix
-                to the synaptic class S
-                basically does the following but fast!
+        """
+        presynaptic, postsynaptic = [], []
+        synapses_pre = {}
+        nsynapses = 0
+        for i in range(len(conn_mat)):
+            conn_nrn = conn_mat[i]
+            k1 = len(conn_nrn)
+            # too connected? get rid of older synapses
+            if self.limit_syn_numbers and f_ee and (k1 > self.synapses_per_nrn):
+                x = max(self.synapses_per_nrn, k1 - self.synapses_per_nrn)
+                conn_nrn = conn_nrn[-x:]  # simply cut!
+                '''
+                # some exponential forgeting of old synapses
+                tau = (k1-self.synapses_per_nrn)/2.
+                conn_nrn = np.array(conn_nrn)[\
+                    np.exp(-np.arange(k1)/tau)<np.random.random(k1)]
+                '''
+            k = len(conn_nrn)  # new number of postsynaptic connections
+            # just print to keep an eye on what's going on
+            # if i<20:
+            # print '# synpapses before and after ', k1,k
+            if k:
+                synapses_pre[i] = nsynapses + np.arange(k)
+                presynaptic.append(i * np.ones(k, dtype=int))
+                postsynaptic.append(conn_nrn)
+                nsynapses += k
+        presynaptic = np.hstack(presynaptic)
+        postsynaptic = np.hstack(postsynaptic)
+        S.connect(i=presynaptic, j=postsynaptic)
 
-                for i, conn_nrn in enumerate(conn_mat):
-                    for j in conn_nrn:
-                        S[i,j]=True
-
-                f_ee is a flag indicating e-e connections
-
-            """
-            presynaptic, postsynaptic = [], []
-            synapses_pre = {}
-            nsynapses = 0
-            for i in range(len(conn_mat)):
-                conn_nrn = conn_mat[i]
-                k1 = len(conn_nrn)
-                # too connected? get rid of older synapses
-                if self.limit_syn_numbers and f_ee and (k1 > self.synapses_per_nrn):
-                    x = max(self.synapses_per_nrn, k1 - self.synapses_per_nrn)
-                    conn_nrn = conn_nrn[-x:]  # simply cut!
-                    '''
-                    # some exponential forgeting of old synapses
-                    tau = (k1-self.synapses_per_nrn)/2.
-                    conn_nrn = np.array(conn_nrn)[\
-                        np.exp(-np.arange(k1)/tau)<np.random.random(k1)]
-                    '''
-                k = len(conn_nrn)  # new number of postsynaptic connections
-                # just print to keep an eye on what's going on
-                # if i<20:
-                # print '# synpapses before and after ', k1,k
-                if k:
-                    synapses_pre[i] = nsynapses + np.arange(k)
-                    presynaptic.append(i * np.ones(k, dtype=int))
-                    postsynaptic.append(conn_nrn)
-                    nsynapses += k
-            presynaptic = np.hstack(presynaptic)
-            postsynaptic = np.hstack(postsynaptic)
-            S.connect(i=presynaptic, j=postsynaptic)
-
+    def set_net_connectivity(self):
+        """sets connections in the network"""
         # creates randomly connected matrices
-        cee = create_random_matrix(self.Ne, self.Ne, self.cp_ee, True)
-        cie = create_random_matrix(self.Ne, self.Ni, self.cp_ie, False)
-        cei = create_random_matrix(self.Ni, self.Ne, self.cp_ei, False)
-        cii = create_random_matrix(self.Ni, self.Ni, self.cp_ii, True)
+        self.cee = self.create_random_matrix(self.Ne, self.Ne, self.cp_ee, True)
+        self.cie = self.create_random_matrix(self.Ne, self.Ni, self.cp_ie, False)
+        self.cei = self.create_random_matrix(self.Ni, self.Ne, self.cp_ei, False)
+        self.cii = self.create_random_matrix(self.Ni, self.Ni, self.cp_ii, True)
 
         # seems that these 2 flags are outdated and unusable; can't bother to
         # remove them now
-        remove_old_conn_flag_ee = False
-        remove_old_conn_flag = False
+        # remove_old_conn_flag_ee = False
+        # remove_old_conn_flag = False
 
         if self.continuous_ass:
-            make_connections_continuous()
+            self.make_connections_continuous()
         else:
-            make_connections_discrete()
+            self.make_connections_discrete()
 
-        apply_connection_matrix(self.C_ee, cee, True)
-        apply_connection_matrix(self.C_ie, cie)
-        apply_connection_matrix(self.C_ei, cei)
-        apply_connection_matrix(self.C_ii, cii)
+        self.apply_connection_matrix(self.C_ee, self.cee, True)
+        self.apply_connection_matrix(self.C_ie, self.cie)
+        self.apply_connection_matrix(self.C_ei, self.cei)
+        self.apply_connection_matrix(self.C_ii, self.cii)
 
         self.C_ee.w = self.g_ee
         self.C_ie.w = self.g_ie
