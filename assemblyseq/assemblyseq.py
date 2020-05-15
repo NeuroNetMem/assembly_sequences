@@ -1,5 +1,5 @@
-import numpy as np
-import brian2 as bb
+import brian2.numpy_ as np
+import brian2.only as bb
 from brian2 import ms, second, Hz, mV, pA, nS, pF
 from time import time, asctime
 
@@ -496,8 +496,6 @@ class Nets:
         return p1_post_f
 
     def make_connections_continuous(self):
-
-
         for n_ch in range(self.n_chains):  # iterate over sequences
             p_index = np.array(self.p_ass_index[n_ch]).flatten()
             p_indexinh = np.array(self.p_assinh_index[n_ch]).flatten()
@@ -752,7 +750,8 @@ class Nets:
         """ runs the network for run_time with I plasticity turned off"""
         t0 = time()
         eta.eta = 0.0
-        self.network.run(run_time)
+        self.network.run(run_time, report_period=2*second,
+                         report='std::cout << (int)(completed*100.) << "% completed" << std::endl;')
         t1 = time()
         print('run: ', t1 - t0)
 
@@ -793,9 +792,10 @@ class Nets:
     def set_syn_input(self, target, time_f: bb.Quantity):
         """adding sync inputs at some time points"""
         # noinspection PyTypeChecker
-        ext_in = bb.SpikeGeneratorGroup(1, indices=bb.array([0]), times=bb.array([time_f]), clock=self.network.clock)
-        C_syne = bb.Synapses(ext_in, target, model='w:siemens', on_pre='ge+=w')
-        C_syne.connect_random(ext_in, target, sparseness=1.)
+        ext_in = bb.SpikeGeneratorGroup(1, indices=np.array([0] * len(time_f)), times=np.array(time_f) * second,
+                                        clock=self.network.clock)
+        C_syne = bb.Synapses(ext_in, self.Pe, model='w:siemens', on_pre='ge+=w')
+        C_syne.connect(i=[0], j=target)
         C_syne.w = 30. * self.g_ee
         self.network.add(ext_in, C_syne)
 
@@ -889,10 +889,9 @@ class Nets:
         self.network.add(self.mon_ecurr_e, self.mon_icurr_e,
                          self.mon_ecurr_i, self.mon_icurr_i)
 
-    # noinspection PyUnresolvedReferences
     def run_full_sim(self, sim_times):
-        self.generate_ordered_ps()  # FIX
-        self.set_ffchain_new()
+        self.generate_ps_assemblies('gen_no_overlap')
+        self.set_net_connectivity()
 
         self.set_rate_monitor()
         self.set_group_spike_monitor()
