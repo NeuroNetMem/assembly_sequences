@@ -6,20 +6,6 @@ from time import time, asctime
 # some custom modules
 from assemblyseq import plotter, calc_spikes
 
-g_l = 10. * nS
-C_m = 200 * pF
-v_r = -60. * mV
-v_e = 0. * mV
-v_i = -80. * mV
-tau_m_exc = 20. * ms
-tau_m_inh = 20. * ms
-tau_inh = 10 * ms
-tau_fast_inh = 10 * ms
-tau_exc = 5. * ms
-tau_stdp = 20. * ms
-alpha = .2
-g_min = 0 * nS
-g_max = 50 * nS
 
 eqs_exc = '''dv/dt = (g_l*(v_r-v)+Ie+Ii+I)/(C_m) : volt
             dge/dt = -ge/(tau_exc) : siemens
@@ -44,15 +30,6 @@ eq_post = '''w=clip(w+eta_p*apre*g_ei,g_min,g_max)
             apost+=1'''
 
 
-class Pointless(object):
-    """a hackaround changing learning rate eta"""
-    pass
-
-
-eta = Pointless()
-eta.v = .001
-eta.eta = 1. * eta.v
-
 # defines an extra clock according to which some extra input currents 
 # can be injected; 
 # one can play with changing conductances etc...
@@ -74,7 +51,6 @@ def inject():
 
 
 class Nets:
-    # FIX
     def __init__(self, config):
         """
             Ne: number of excitatory neurons
@@ -96,7 +72,11 @@ class Nets:
                               'inject_some_extra_i': False, 'g_ff_coef': 1,
                               'symmetric_sequence': False, 'p_rev': 0., 'extra_recorded_nrns': False,
                               'limit_syn_numbers': False, 'continuous_ass': False,
-                              'use_random_conn_ff': False, 'modified_contin': False}
+                              'use_random_conn_ff': False, 'modified_contin': False,
+                              'g_l': 10. * nS, 'C_m': 200 * pF, 'v_r': -60. * mV, 'v_e': 0. * mV, 'v_i': -80. * mV,
+                              'tau_m_exc': 20. * ms, 'tau_m_inh': 20. * ms, 'tau_inh': 10 * ms,
+                              'tau_fast_inh': 10 * ms, 'tau_exc': 5. * ms, 'tau_stdp': 20. * ms,
+                              'alpha': .2, 'g_min': 0 * nS, 'g_max': 50 * nS, 'eta_p': 0.001}
 
         self.Ne: int = 0
         self.Ni: int = 0
@@ -133,13 +113,15 @@ class Nets:
         self.synapses_per_nrn: int = 0
         self.p_rev: float = 0.
 
+        self.eta_p: float = 0.
         self.extra_recorded_nrns: bool = False
         self.limit_syn_numbers: bool = False
         self.modified_contin: bool = False
 
         self.configure_net(config)
 
-        self.timestep = .1 * ms  # simulation time step
+        self.eta_scale = .001
+        self.sim_timestep = .1 * ms  # simulation time step
         self.D = 2 * ms  # AP delay
         self.m_ts = 1. * ms  # monitors time step
 
@@ -270,15 +252,17 @@ class Nets:
     def create_net(self):
         """ create a network with and connect it"""
         self.network = bb.Network()
-        self.network.clock = bb.Clock(dt=self.timestep)
+        self.network.clock = bb.Clock(dt=self.sim_timestep)
 
         # create a couple of groups
         # noinspection PyTypeChecker
         self.Pe = bb.NeuronGroup(self.Ne, eqs_exc, threshold='v > -50 * mV',
-                                 reset='v = -60 * mV', refractory=2. * ms, method='euler')
+                                 reset='v = -60 * mV', refractory=2. * ms, method='euler',
+                                 namespace=self.__dict__)
         # noinspection PyTypeChecker
         self.Pi = bb.NeuronGroup(self.Ni, eqs_inh, threshold='v > -50 * mV',
-                                 reset='v = -60 * mV', refractory=2. * ms, method='euler')
+                                 reset='v = -60 * mV', refractory=2. * ms, method='euler',
+                                 namespace=self.__dict__)
 
         self.Pe.v = (-65 + 15 * np.random.rand(self.Ne)) * mV
         self.Pi.v = (-65 + 15 * np.random.rand(self.Ni)) * mV
@@ -297,10 +281,10 @@ class Nets:
         self.C_ii = bb.Synapses(self.Pi, self.Pi, model='w:siemens', on_pre='gi+=w')
         stdp_on = True
         if stdp_on:
-            namespace = {'g_ei': self.g_ei, 'eta_p': eta.eta}
+
             self.C_ei = bb.Synapses(self.Pi, self.Pe,
                                     model=eq_stdp, on_pre=eq_pre, on_post=eq_post,
-                                    namespace=namespace)
+                                    namespace=self.__dict__)
         else:
             self.C_ei = bb.Synapses(self.Pi, self.Pe,
                                     model='w:siemens', on_pre='gi_post+=w')
@@ -749,16 +733,16 @@ class Nets:
 
         """
         t0 = time()
-        eta.eta = eta.v * eta_c
+        self.eta_p = self.eta_scale * eta_c
         self.network.run(bal_time)
-        eta.eta = 0.0
+        self.eta_p = 0.0
         t1 = time()
         print('balanced: ', t1 - t0)
 
     def run_sim(self, run_time=1 * second):
         """ runs the network for run_time with I plasticity turned off"""
         t0 = time()
-        eta.eta = 0.0
+        self.eta_p = 0.0
         self.network.run(run_time, report_period=2 * second,
                          report='std::cout << (int)(completed*100.) << "% completed" << std::endl;')
         t1 = time()
