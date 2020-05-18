@@ -1,6 +1,6 @@
 import brian2.numpy_ as np
 import brian2.only as bb
-from brian2 import ms, second, Hz, mV, pA, nS, pF
+from brian2 import ms, second, Hz, mV, pA, nS, pF, Quantity
 from time import time, asctime
 
 # some custom modules
@@ -44,13 +44,6 @@ eq_post = '''w=clip(w+eta_p*apre*g_ei,g_min,g_max)
             apost+=1'''
 
 
-def if_else(condition, a, b):
-    if condition:
-        return a
-    else:
-        return b
-
-
 class Pointless(object):
     """a hackaround changing learning rate eta"""
     pass
@@ -74,23 +67,15 @@ def inject():
         Injects currents into neuronal populations...off by default
     """
     if myclock.t > 25000 * ms:
-        nn.Pe.I = nn.ext_input + \
-            nn.Isine * (1. + 0 * np.sin(2 * np.pi * myclock.t * syn_input_freq))
-        nn.Pi.I = nn.ext_input + \
-            nn.Isini * (1. + 0 * np.sin(2 * np.pi * myclock.t * syn_input_freq))
+        nn.Pe.I = (nn.ext_input +
+                   nn.Isine * (1. + 0 * np.sin(2 * np.pi * myclock.t * syn_input_freq)))
+        nn.Pi.I = (nn.ext_input +
+                   nn.Isini * (1. + 0 * np.sin(2 * np.pi * myclock.t * syn_input_freq)))
 
 
-# noinspection PyUnusedLocal,PyPep8Naming
 class Nets:
     # FIX
-    def __init__(self, Ne=10000, Ni=2500, cp_ee=.02, cp_ie=.02, cp_ei=.02,
-                 cp_ii=.02, pr=.05, pf=.05, g_ee=0.19 * nS, g_ie=0.2 * nS, g_ei=1.0 * nS,
-                 g_ii=1.0 * nS, n_ass=10, s_ass=500, n_chains=0, cf_ffn=1., cf_rec=1.,
-                 type_ext_input='curr', ext_input=200 * pA, synapses_per_nrn=250,
-                 inject_some_extra_i=False, g_ff_coef=1,
-                 symmetric_sequence=False, p_rev=0., extra_recorded_nrns=False,
-                 limit_syn_numbers=False, continuous_ass=False,
-                 use_random_conn_ff=False, modified_contin=False):
+    def __init__(self, config):
         """
             Ne: number of excitatory neurons
             r_ie: ration of Ni/Ne
@@ -103,63 +88,83 @@ class Nets:
             only integer values, if I want a strong synapse, I just put several
             normal ones!
         """
-        ########################################################################
-        # define a bunch of consts
+
+        self.configurables = {'Ne': 10000, 'Ni': 2500, 'cp_ee': .02, 'cp_ie': .02, 'cp_ei': .02,
+                              'cp_ii': .02, 'pr': .05, 'pf': .05, 'g_ee': 0.19 * nS, 'g_ie': 0.2 * nS, 'g_ei': 1.0 * nS,
+                              'g_ii': 1.0 * nS, 'n_ass': 10, 's_ass': 500, 'n_chains': 0, 'cf_ffn': 1., 'cf_rec': 1.,
+                              'type_ext_input': 'curr', 'ext_input': 200 * pA, 'synapses_per_nrn': 250,
+                              'inject_some_extra_i': False, 'g_ff_coef': 1,
+                              'symmetric_sequence': False, 'p_rev': 0., 'extra_recorded_nrns': False,
+                              'limit_syn_numbers': False, 'continuous_ass': False,
+                              'use_random_conn_ff': False, 'modified_contin': False}
+
+        self.Ne: int = 0
+        self.Ni: int = 0
+
+        # random connectivity
+        self.cp_ee: float = 0.
+        self.cp_ie: float = 0.
+        self.cp_ei: float = 0.
+        self.cp_ii: float = 0.
+
+        # synaptic conductances
+        self.g_ee: float = 0.
+        self.g_ie: float = 0.
+        self.g_ei: float = 0.
+        self.g_ii: float = 0.
+        self.g_max: float = 0.
+        self.g_l: float = 0.
+        self.cf_ffn: float = 0.  # strength of ffn synaptic connections
+        self.cf_rec: float = 0.  # strength of rec synaptic connections
+        self.n_chains: int = 0
+        self.n_ass: int = 0  # number of assemblies in the ffn/minimum 2
+        self.s_ass: int = 0  # neurons in an assembly
+        self.type_ext_input: str = ''
+        self.ext_input: Quantity = 0 * pA
+        self.pr: float = 0.
+        self.pf: float = 0.
+
+        self.inject_some_extra_i: bool = False
+        self.g_ff_coef: int = 0
+        self.use_random_conn_ff: bool = False
+        # FB maybe?
+        self.symmetric_sequence: bool = False
+        self.continuous_ass: bool = False
+        self.synapses_per_nrn: int = 0
+        self.p_rev: float = 0.
+
+        self.extra_recorded_nrns: bool = False
+        self.limit_syn_numbers: bool = False
+        self.modified_contin: bool = False
+
+        self.configure_net(config)
+
         self.timestep = .1 * ms  # simulation time step
         self.D = 2 * ms  # AP delay
         self.m_ts = 1. * ms  # monitors time step
 
-        if Ne > 0:
-            self.r_ie = (Ni + .0) / Ne  # ratio Ni/Ne
+        if self.Ne > 0:
+            self.r_ie = (self.Ni + .0) / self.Ne  # ratio Ni/Ne
         else:
             self.r_ie = .0
-        self.Ne = Ne
-        self.Ni = Ni
+
         self.N = self.Ne + self.Ni
         # set some random connectivity for all E,I neurons
-        self.cp_ee = cp_ee
-        self.cp_ie = cp_ie
-        self.cp_ei = cp_ei
-        self.cp_ii = cp_ii
+
         # conductances
-        self.g_ee = g_ee
-        self.g_ie = g_ie
-        self.g_ei = g_ei
-        self.g_ii = g_ii
-        self.g_max = g_max
 
-        self.g_ff_coef = int(g_ff_coef)
-        self.g_l = g_l
-        self.use_random_conn_ff = use_random_conn_ff
-
-        self.type_ext_input = type_ext_input
-        self.ext_input = ext_input
-
-        self.limit_syn_numbers = limit_syn_numbers
-        self.n_chains = n_chains
-        self.n_ass = n_ass  # number of assemblies in the ffn/minimum 2
-        self.s_ass = s_ass  # neurons in an assembly
         self.s_assinh = int(self.s_ass * self.r_ie)
 
-        self.cf_ffn = cf_ffn  # strength of ffn synaptic connections
-        self.cf_rec = cf_rec  # strength of rec synaptic connections
-
         # recurrent connection probabilities into a group
-        self.pr_ee = pr  # e to e
-        self.pr_ie = pr  # e to i
-        self.pr_ei = pr
-        self.pr_ii = pr
+        self.pr_ee = self.pr  # e to e
+        self.pr_ie = self.pr  # e to i
+        self.pr_ei = self.pr
+        self.pr_ii = self.pr
         # FF connection probabilities
-        self.pf_ee = pf
+        self.pf_ee = self.pf
         self.pf_ie = 0  # pf
         self.pf_ei = 0  # pf
         self.pf_ii = 0  # pf
-        # FB maybe?
-        self.symmetric_sequence = symmetric_sequence
-        self.continuous_ass = continuous_ass
-        self.synapses_per_nrn = synapses_per_nrn
-
-        self.modified_contin = modified_contin
 
         self.sh_e = 0
         self.sh_i = 0
@@ -189,7 +194,7 @@ class Nets:
         self.nrn_meas_e.append(self.Ne - 1)
         self.nrn_meas_i.append(self.Ni - 1)
 
-        if extra_recorded_nrns:
+        if self.extra_recorded_nrns:
             # record extra all nrns in second, last assembly and random nrns
             for i in range(self.s_ass):
                 self.nrn_meas_e.append(1 * self.s_ass + i)
@@ -209,8 +214,6 @@ class Nets:
         self.dummy_group = []
         self.C_ed = []
 
-        self.inject_some_extra_i = inject_some_extra_i
-        self.p_rev = p_rev
         # define variables..needed??
         self.network = None
         self.Pe = None
@@ -255,6 +258,14 @@ class Nets:
         self.create_net()
 
         print('initiated ', asctime())
+
+    def configure_net(self, config):
+        par_values = {k: (config[k] if k in config else self.configurables[k]) for k in self.configurables}
+        self.__dict__.update(par_values)
+
+    def get_parameters(self):
+        params = {k: self.__dict__[k] for k in self.configurables}
+        return params
 
     def create_net(self):
         """ create a network with and connect it"""
@@ -375,7 +386,8 @@ class Nets:
         self.dummy_ass_index.append(self.gen_dummy(p_ind_e_out))
         self.n_chains += 1
 
-    def create_random_matrix(self, pre_nrns, post_nrns, p, pre_is_post=True):
+    @classmethod
+    def create_random_matrix(cls, pre_nrns, post_nrns, p, pre_is_post=True):
         """
             creates random connections between 2 populations of size
             pre_nrns and post_nrns (population sizes)
@@ -407,10 +419,7 @@ class Nets:
                                        np.random.random(len(p_index[n_gr])) < self.pr_ee])
                     if p1 in p1_post:  # no autosynapse
                         p1_post.remove(p1)
-                    # if remove_old_conn_flag_ee:
-                    #     cee[p1] = cee[p1][len(p1_post):]
-                    #     if p1 < 5:
-                    #         print(n_gr, p1, len(p1_post))
+
                     self.cee[p1].extend(p1_post)
                     # E to E feedforward
                     if n_gr < self.n_ass - 1:  # in case it's the last group
@@ -518,7 +527,7 @@ class Nets:
 
                 # E-to-I recurrent
                 p1_post = self.find_post(p_indexinh, i / 4, ran_be_i, ran_af_i,
-                                    self.pr_ie)
+                                         self.pr_ie)
                 self.cie[p1].extend(p1_post)
 
                 # E-to-E feedforward
@@ -535,12 +544,12 @@ class Nets:
             for i, i1 in enumerate(p_indexinh):
                 # I-to-E recurrent
                 i1_post = self.find_post(p_index, 4 * i,
-                                    ran_be, ran_af, self.pr_ei)
+                                         ran_be, ran_af, self.pr_ei)
                 self.cei[i1].extend(i1_post)
 
                 # I-to-I recurrent
                 i1_post = self.find_post(p_indexinh, i, ran_be_i, ran_af_i,
-                                    self.pr_ii)
+                                         self.pr_ii)
                 # if i1 in i1_post: # no autosynapse
                 # i1_post = list(i1_post).remove(i1)
                 self.cii[i1].extend(i1_post)
@@ -750,7 +759,7 @@ class Nets:
         """ runs the network for run_time with I plasticity turned off"""
         t0 = time()
         eta.eta = 0.0
-        self.network.run(run_time, report_period=2*second,
+        self.network.run(run_time, report_period=2 * second,
                          report='std::cout << (int)(completed*100.) << "% completed" << std::endl;')
         t1 = time()
         print('run: ', t1 - t0)
@@ -979,7 +988,7 @@ class Nets:
             plt.figure(figsize=(12., 8.))
             plotter.plot_ps_raster(self, chain_n=n, frac=.01)
 
-    def test_shifts(self, ie, ii, tr):
+    def test_shifts(self, ie, ii):
         self.generate_ps_assemblies('gen_no_overlap')
         self.set_net_connectivity()
         self.set_spike_monitor()
@@ -1000,8 +1009,6 @@ class Nets:
         self.balance(5 * second, .01)
         self.run_sim(10 * second)
 
-        pr, pf = self.pr_ee, self.pf_ee
-
         plt.figure(figsize=(12., 8.))
         plotter.plot_ps_raster(self, chain_n=0, frac=.1)
         # plt.xlim([6800,8300])
@@ -1021,9 +1028,10 @@ class Nets:
 
 
 def test_symm():
-    nn_f = Nets(Ne=20000, Ni=5000, cp_ee=.01, cp_ie=.01, cp_ei=0.01, cp_ii=.01,
-                n_ass=10, s_ass=500, pr=.15, pf=.03, symmetric_sequence=True, p_rev=.03,
-                g_ee=0.1 * nS, g_ie=0.1 * nS, g_ei=0.4 * nS, g_ii=0.4 * nS)
+    config = {'Ne': 20000, 'Ni': 5000, 'cp_ee': .01, 'cp_ie': .01, 'cp_ei': 0.01, 'cp_ii': .01,
+              'n_ass': 10, 's_ass': 500, 'pr': .15, 'pf': .03, 'symmetric_sequence': True, 'p_rev': .03,
+              'g_ee': 0.1 * nS, 'g_ie': 0.1 * nS, 'g_ei': 0.4 * nS, 'g_ii': 0.4 * nS}
+    nn_f = Nets(config)
 
     nn_f.generate_ps_assemblies('gen_no_overlap')
     nn_f.set_net_connectivity()
@@ -1084,11 +1092,10 @@ def test_symm():
 
 
 def test_fr():
-    pr, pf = 0.06, 0.06
-
-    nn_f = Nets(Ne=20000, Ni=5000, cp_ee=.01, cp_ie=.01, cp_ei=0.01, cp_ii=.01,
-                n_ass=10, s_ass=500, pr=pr, pf=pf,
-                g_ee=0.1 * nS, g_ie=0.1 * nS, g_ei=0.4 * nS, g_ii=0.4 * nS)
+    config_test = {'Ne': 20000, 'Ni': 5000, 'cp_ee': .01, 'cp_ie': .01, 'cp_ei': 0.01, 'cp_ii': .01,
+                   'n_ass': 10, 's_ass': 500, 'pr': 0.06, 'pf': 0.06,
+                   'g_ee': 0.1 * nS, 'g_ie': 0.1 * nS, 'g_ei': 0.4 * nS, 'g_ii': 0.4 * nS}
+    nn_f = Nets(config_test)
 
     nn_f.generate_ps_assemblies('gen_no_overlap')
     nn_f.set_net_connectivity()
@@ -1124,10 +1131,10 @@ def test_fr():
 
 
 def test_no_ps():
-    pr, pf = 0.06, 0.06
-    nn_f = Nets(Ne=20000, Ni=5000, cp_ee=.01, cp_ie=.01, cp_ei=0.01, cp_ii=.01,
-                n_chains=0, n_ass=2, s_ass=500, pr=pr, pf=pf,
-                g_ee=0.1 * nS, g_ie=0.1 * nS, g_ei=0.4 * nS, g_ii=0.4 * nS)
+    config_test = {'Ne': 20000, 'Ni': 5000, 'cp_ee': .01, 'cp_ie': .01, 'cp_ei': 0.01, 'cp_ii': .01,
+                   'n_chains': 0, 'n_ass': 2, 's_ass': 500, 'pr': 0.06, 'pf': 0.06,
+                   'g_ee': 0.1 * nS, 'g_ie': 0.1 * nS, 'g_ei': 0.4 * nS, 'g_ii': 0.4 * nS}
+    nn_f = Nets(config_test)
 
     nn_f.set_net_connectivity()
     nn_f.set_spike_monitor()
@@ -1161,10 +1168,11 @@ def test_diff_gff(Ne=20000):
     pr = pr * (Ne / 20000.) ** .5
 
     continuous_ass = False
-    nn_f = Nets(Ne=Ne, Ni=Ni, cp_ee=cp, cp_ie=cp, cp_ei=cp, cp_ii=cp,
-                n_ass=10, s_ass=500, pr=pr, pf=pf, ext_input=200 * pA,
-                g_ee=gee, g_ie=gee, g_ei=gii, g_ii=gii, g_ff_coef=gfc,
-                continuous_ass=continuous_ass)
+    config_test = {'Ne': Ne, 'Ni': Ni, 'cp_ee': cp, 'cp_ie': cp, 'cp_ei': cp, 'cp_ii': cp,
+                   'n_ass': 10, 's_ass': 500, 'pr': pr, 'pf': pf, 'ext_input': 200 * pA,
+                   'g_ee': gee, 'g_ie': gee, 'g_ei': gii, 'g_ii': gii, 'g_ff_coef': gfc,
+                   'continuous_ass': continuous_ass}
+    nn_f = Nets(config_test)
 
     # nn.generate_ps_assemblies('')
     nn_f.generate_ps_assemblies('gen_ordered')
@@ -1202,9 +1210,12 @@ def test_psps():
     ge0 = 0.1 * nS
     gi0 = 0.4 * nS
     cp = 0
-    nn_f = Nets(Ne=10, Ni=2, cp_ee=cp, cp_ie=cp, cp_ei=cp, cp_ii=cp,
-                n_ass=0, s_ass=1, pr=0, pf=0, ext_input=0 * pA,
-                g_ee=ge0, g_ie=ge0, g_ei=gi0, g_ii=gi0)
+
+    config_test = {'Ne': 10, 'Ni': 2, 'cp_ee': cp, 'cp_ie': cp, 'cp_ei': cp, 'cp_ii': cp,
+                   'n_ass': 0, 's_ass': 1, 'pr': 0, 'pf': 0, 'ext_input': 0 * pA,
+                   'g_ee': ge0, 'g_ie': ge0, 'g_ei': gi0, 'g_ii': gi0}
+
+    nn_f = Nets(config_test)
 
     nn_f.C_ee = bb.Synapses(nn_f.Pe, nn_f.Pe, model='w:siemens', on_pre='ge+=w')
     nn_f.C_ee[0, 9] = True
@@ -1236,11 +1247,11 @@ def test_psps():
 
 
 def test_longseq():
-    nn_f = Nets(Ne=20000, Ni=5000, cp_ee=.01, cp_ie=.01, cp_ei=0.01, cp_ii=.01,
-                n_ass=444, s_ass=150, pr=.19, pf=.19, synapses_per_nrn=200,
-                ext_input=200 * pA, limit_syn_numbers=True,
-                g_ee=0.1 * nS, g_ie=0.1 * nS, g_ei=0.4 * nS, g_ii=0.4 * nS
-                )
+    config_test = {'Ne': 20000, 'Ni': 5000, 'cp_ee': .01, 'cp_ie': .01, 'cp_ei': 0.01, 'cp_ii': .01,
+                   'n_ass': 444, 's_ass': 150, 'pr': .19, 'pf': .19, 'synapses_per_nrn': 200,
+                   'ext_input': 200 * pA, 'limit_syn_numbers': True,
+                   'g_ee': 0.1 * nS, 'g_ie': 0.1 * nS, 'g_ei': 0.4 * nS, 'g_ii': 0.4 * nS}
+    nn_f = Nets(config_test)
     nn_f.generate_ps_assemblies('gen_ass_overlap')
     nn_f.set_net_connectivity()
     nn_f.set_spike_monitor()
@@ -1283,9 +1294,10 @@ def test_2_ass(Ne=20000):
     ge0 = 0.1 * nS
     gi0 = 0.4 * nS
 
-    nn_f = Nets(Ne=Ne, Ni=Ni, cp_ee=cp, cp_ie=cp, cp_ei=cp, cp_ii=cp,
-                n_ass=10, s_ass=500, pr=pr, pf=pf, ext_input=200 * pA,
-                g_ee=ge0, g_ie=ge0, g_ei=gi0, g_ii=gi0)
+    config_test = {'Ne': Ne, 'Ni': Ni, 'cp_ee': cp, 'cp_ie': cp, 'cp_ei': cp, 'cp_ii': cp,
+                   'n_ass': 10, 's_ass': 500, 'pr': pr, 'pf': pf, 'ext_input': 200 * pA,
+                   'g_ee': ge0, 'g_ie': ge0, 'g_ei': gi0, 'g_ii': gi0}
+    nn_f = Nets(config_test)
 
     nn_f.generate_ps_assemblies('gen_ordered')
     nn_f.generate_ps_assemblies('gen_ordered')
@@ -1332,11 +1344,11 @@ def show_ass_frs():
 
     """
 
-    nn_f = Nets(Ne=20000, Ni=5000, cp_ee=.01, cp_ie=.01, cp_ei=0.01, cp_ii=.01,
-                n_ass=10, s_ass=500, pr=.06, pf=.06,
-                ext_input=200 * pA,
-                g_ee=0.1 * nS, g_ie=0.1 * nS, g_ei=0.4 * nS, g_ii=0.4 * nS
-                )
+    config_test = {'Ne': 20000, 'Ni': 5000, 'cp_ee': .01, 'cp_ie': .01, 'cp_ei': 0.01, 'cp_ii': .01,
+                   'n_ass': 10, 's_ass': 500, 'pr': .06, 'pf': .06,
+                   'ext_input': 200 * pA,
+                   'g_ee': 0.1 * nS, 'g_ie': 0.1 * nS, 'g_ei': 0.4 * nS, 'g_ii': 0.4 * nS}
+    nn_f = Nets(config_test)
     nn_f.generate_ps_assemblies('gen_ordered')
     nn_f.set_net_connectivity()
     nn_f.set_spike_monitor()
@@ -1372,11 +1384,11 @@ def show_ass_frs():
 
 
 def test_tau():
-    nn_f = Nets(Ne=20000, Ni=5000, cp_ee=.01, cp_ie=.01, cp_ei=0.01, cp_ii=.01,
-                n_ass=1, s_ass=500, pr=.00, pf=.00,
-                ext_input=200 * pA,
-                g_ee=0.1 * nS, g_ie=0.1 * nS, g_ei=0.4 * nS, g_ii=0.4 * nS
-                )
+    config_test = {'Ne': 20000, 'Ni': 5000, 'cp_ee': .01, 'cp_ie': .01, 'cp_ei': 0.01, 'cp_ii': .01,
+                   'n_ass': 1, 's_ass': 500, 'pr': .00, 'pf': .00,
+                   'ext_input': 200 * pA,
+                   'g_ee': 0.1 * nS, 'g_ie': 0.1 * nS, 'g_ei': 0.4 * nS, 'g_ii': 0.4 * nS}
+    nn_f = Nets(config_test)
     nn_f.generate_ps_assemblies('gen_ordered')
     nn_f.set_net_connectivity()
     nn_f.set_spike_monitor()
@@ -1469,10 +1481,11 @@ def test_boost_pf():
     pf = pf * (Ne / 20000.) ** .5
     pr = pr * (Ne / 20000.) ** .5
 
-    neur_net = Nets(Ne=Ne, Ni=Ni, cp_ee=cp, cp_ie=cp, cp_ei=cp, cp_ii=cp,
-                    n_ass=10, s_ass=500, pr=pr, pf=pf, ext_input=200 * pA,
-                    g_ee=gee, g_ie=gee, g_ei=gii, g_ii=gii, g_ff_coef=gfc,
-                    modified_contin=True)
+    config_test = {'Ne': Ne, 'Ni': Ni, 'cp_ee': cp, 'cp_ie': cp, 'cp_ei': cp, 'cp_ii': cp,
+                   'n_ass': 10, 's_ass': 500, 'pr': pr, 'pf': pf, 'ext_input': 200 * pA,
+                   'g_ee': gee, 'g_ie': gee, 'g_ei': gii, 'g_ii': gii, 'g_ff_coef': gfc,
+                   'modified_contin': True}
+    neur_net = Nets(config_test)
 
     # nn.generate_ps_assemblies('gen_no_overlap')
     neur_net.generate_ps_assemblies('gen_ordered')
@@ -1542,10 +1555,11 @@ def test_boost_pf_cont():
     pf = pf * (Ne / 20000.) ** .5
     pr = pr * (Ne / 20000.) ** .5
 
-    nn_f = Nets(Ne=Ne, Ni=Ni, cp_ee=cp, cp_ie=cp, cp_ei=cp, cp_ii=cp,
-                n_ass=10, s_ass=500, pr=pr, pf=pf, ext_input=200 * pA,
-                g_ee=gee, g_ie=gee, g_ei=gii, g_ii=gii, g_ff_coef=gfc,
-                continuous_ass=True, modified_contin=True)
+    config_test = {'Ne': Ne, 'Ni': Ni, 'cp_ee': cp, 'cp_ie': cp, 'cp_ei': cp, 'cp_ii': cp,
+                   'n_ass': 10, 's_ass': 500, 'pr': pr, 'pf': pf, 'ext_input': 200 * pA,
+                   'g_ee': gee, 'g_ie': gee, 'g_ei': gii, 'g_ii': gii, 'g_ff_coef': gfc,
+                   'continuous_ass': True, 'modified_contin': True}
+    nn_f = Nets(config_test)
 
     # nn.generate_ps_assemblies('gen_no_overlap')
     nn_f.generate_ps_assemblies('gen_ordered')
@@ -1595,11 +1609,11 @@ def test_boost_pf_cont():
 
 
 def test_slopes():
-    nn_f = Nets(Ne=20000, Ni=5000, cp_ee=.01, cp_ie=.01, cp_ei=0.01, cp_ii=.01,
-                n_ass=1, s_ass=500, pr=.0, pf=.0,
-                ext_input=200 * pA,
-                g_ee=0.1 * nS, g_ie=0.1 * nS, g_ei=0.4 * nS, g_ii=0.4 * nS
-                )
+    config_test = {'Ne': 20000, 'Ni': 5000, 'cp_ee': .01, 'cp_ie': .01, 'cp_ei': 0.01, 'cp_ii': .01,
+                   'n_ass': 1, 's_ass': 500, 'pr': .0, 'pf': .0,
+                   'ext_input': 200 * pA,
+                   'g_ee': 0.1 * nS, 'g_ie': 0.1 * nS, 'g_ei': 0.4 * nS, 'g_ii': 0.4 * nS}
+    nn_f = Nets(config_test)
     nn_f.generate_ps_assemblies('gen_ordered')
     nn_f.set_net_connectivity()
     nn_f.set_spike_monitor()
@@ -1678,10 +1692,11 @@ def test_contin(Ne=20000):
     pf = .06
 
     continuous_ass = True
-    nn_f = Nets(Ne=Ne, Ni=Ni, cp_ee=cp, cp_ie=cp, cp_ei=cp, cp_ii=cp,
-                n_ass=n_ass, s_ass=s_ass, pr=pr, pf=pf, ext_input=200 * pA,
-                g_ee=gee, g_ie=gee, g_ei=gii, g_ii=gii, g_ff_coef=gfc,
-                continuous_ass=continuous_ass)
+    config_test = {'Ne': Ne, 'Ni': Ni, 'cp_ee': cp, 'cp_ie': cp, 'cp_ei': cp, 'cp_ii': cp,
+                   'n_ass': n_ass, 's_ass': s_ass, 'pr': pr, 'pf': pf, 'ext_input': 200 * pA,
+                   'g_ee': gee, 'g_ie': gee, 'g_ei': gii, 'g_ii': gii, 'g_ff_coef': gfc,
+                   'continuous_ass': continuous_ass}
+    nn_f = Nets(config_test)
 
     # nn.generate_ps_assemblies('gen_no_overlap')
     nn_f.generate_ps_assemblies('gen_ordered')
@@ -1721,9 +1736,10 @@ def test_contin(Ne=20000):
 if __name__ == '__main__':
     from matplotlib import pyplot as plt
 
-    nn = Nets(Ne=20000, Ni=5000, cp_ee=.01, cp_ie=.01, cp_ei=0.01, cp_ii=.01,
-              n_ass=10, s_ass=500, pr=.15, pf=.03, symmetric_sequence=True, p_rev=.03,
-              g_ee=0.1 * nS, g_ie=0.1 * nS, g_ei=0.4 * nS, g_ii=0.4 * nS)
+    config_main = {'Ne': 20000, 'Ni': 5000, 'cp_ee': .01, 'cp_ie': .01, 'cp_ei': 0.01, 'cp_ii': .01,
+                   'n_ass': 10, 's_ass': 500, 'pr': .15, 'pf': .03, 'symmetric_sequence': True, 'p_rev': .03,
+                   'g_ee': 0.1 * nS, 'g_ie': 0.1 * nS, 'g_ei': 0.4 * nS, 'g_ii': 0.4 * nS}
+    nn = Nets(config_main)
 
     nn.generate_ps_assemblies('gen_no_overlap')
     nn.set_net_connectivity()
@@ -1758,7 +1774,6 @@ if __name__ == '__main__':
     nn.run_sim(.5 * second)
     for nrn in nn.p_ass_index[0][9]:
         nn.Pe[nrn].I -= 3 * pA
-
 
     plotter.plot_ps_raster(nn, chain_n=0, frac=.1)
     plt.xlim([20000, 22000])
