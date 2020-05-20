@@ -1,8 +1,6 @@
 
 ^
 ..idea/inspectionProfiles/profiles_settings.xml,1/e/1e9075f5bf079c01ef2c910709e91a497d262080
-A
-proto_longlong.py,9/5/957c59cb2c465b611efc3e19a007fb6ee70f375e
 N
 .idea/dictionaries/fpbatta.xml,a/f/afc3dd50b389cf711b92acaa9e1db2aaa4c77283
 9

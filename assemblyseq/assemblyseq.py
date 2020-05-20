@@ -185,18 +185,9 @@ class Nets:
             for i in range(self.s_ass):
                 self.nrn_meas_e.append(self.n_ass * self.s_ass + i)
 
-        self.p_ass = []
-        self.p_assinh = []
-        self.p_ass_index = []
-        self.p_assinh_index = []
-
-        self.dummy_ass_index = []  # index of non-PS neurons, size is s_ass
-        # then function to apply them (later)
-
         self.dummy_group = []
         self.C_ed = []
 
-        # define variables..needed??
         self.network = None
         self.Pe = None
         self.Pi = None
@@ -209,8 +200,6 @@ class Nets:
         self.cie = None
         self.cei = None
         self.cii = None
-        self.mon_rate_e = None
-        self.mon_rate_i = None
 
         self.Isine = None
         self.Isini = None
@@ -220,6 +209,14 @@ class Nets:
 
         self.P_poisson = None
 
+        self.p_ass = []
+        self.p_assinh = []
+        self.p_ass_index = []
+        self.p_assinh_index = []
+
+        self.dummy_ass_index = []  # index of non-PS neurons, size is s_ass
+        self.mon_rate_e = None
+        self.mon_rate_i = None
         self.mon_spike_e = None
         self.mon_spike_i = None
 
@@ -248,6 +245,9 @@ class Nets:
     def get_parameters(self):
         params = {k: self.__dict__[k] for k in self.configurables}
         return params
+
+    def get_results(self):
+        return SimResult(self)
 
     def create_net(self):
         """ create a network with and connect it"""
@@ -1009,6 +1009,33 @@ class Nets:
         for nrn_f in self.p_ass_index[ps][gr_f]:
             self.Pe[nrn_f].I -= curr
         self.run_sim(dur_relx * ms)
+
+
+class SimResult:
+    def __init__(self, net: Nets):
+        from dotmap import DotMap
+        self.p_ass_index = net.p_ass_index
+        self.p_assinh_index = net.p_assinh_index
+
+        self.dummy_ass_index = []  # index of non-PS neurons, size is s_ass
+
+        self.mon_rate_e = DotMap(net.mon_rate_e.get_states()) if net.mon_rate_e is not None else None
+        self.mon_rate_i = DotMap(net.mon_rate_i.get_states()) if net.mon_rate_i is not None else None
+        self.mon_spike_e = DotMap(net.mon_spike_e.get_states()) if net.mon_spike_e is not None else None
+        self.mon_spike_i = DotMap(net.mon_spike_i.get_states()) if net.mon_spike_i is not None else None
+        self.mon_spike_gr = DotMap(net.mon_spike_gr.get_states()) if net.mon_spike_gr is not None else None
+        self.mon_volt_e = DotMap(net.mon_volt_e.get_states()) if net.mon_volt_e is not None else None
+        self.mon_volt_i = DotMap(net.mon_volt_i.get_states()) if net.mon_volt_i is not None else None
+        self.mon_econd_e = DotMap(net.mon_econd_e.get_states()) if net.mon_econd_e is not None else None
+        self.mon_icond_e = DotMap(net.mon_icond_e.get_states()) if net.mon_icond_e is not None else None
+        self.mon_econd_i = DotMap(net.mon_econd_i.get_states()) if net.mon_econd_i is not None else None
+        self.mon_icond_i = DotMap(net.mon_icond_i.get_states()) if net.mon_icond_i is not None else None
+        self.mon_ecurr_e = DotMap(net.mon_ecurr_e.get_states()) if net.mon_ecurr_e is not None else None
+        self.mon_icurr_e = DotMap(net.mon_icurr_e.get_states()) if net.mon_icurr_e is not None else None
+        self.mon_ecurr_i = DotMap(net.mon_ecurr_i.get_states()) if net.mon_ecurr_i is not None else None
+        self.mon_icurr_i = DotMap(net.mon_icurr_i.get_states()) if net.mon_icurr_i is not None else None
+
+        self.params = net.get_parameters()
 
 
 def test_symm():

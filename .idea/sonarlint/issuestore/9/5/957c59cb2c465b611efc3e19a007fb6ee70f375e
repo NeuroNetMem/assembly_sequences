@@ -1,96 +1,0 @@
-
-Cpython:S125Í"Remove this commented out code.(éïĞ×ÿÿÿÿÿ8¹ò‹«œ.
-=python:S125Ì"Remove this commented out code.(îë¸8¹ò‹«œ.
-Jpython:S1481 "%Remove the unused local variable "i".(óÎÜªşÿÿÿÿ8¹ò‹«œ.
->python:S125²"Remove this commented out code.(Øå²…8¹ò‹«œ.
->python:S125ı
-"Remove this commented out code.(âÈÖâ8¹ò‹«œ.
->python:S125©"Remove this commented out code.(–ß®ƒ8¹ò‹«œ.
->python:S125ÿ"Remove this commented out code.(ÁÜÏ8¹ò‹«œ.
-Mpython:S5603"(Remove this unused function declaration.(ßÍ‡Óıÿÿÿÿ8¹ò‹«œ.
-Cpython:S125š"Remove this commented out code.(–ú…®øÿÿÿÿ8¹ò‹«œ.
->python:S125³
-"Remove this commented out code.(½ã€’8¹ò‹«œ.
-Epython:S1481²"%Remove the unused local variable "n".(¢šè¼8¹ò‹«œ.
-Cpython:S125È"Remove this commented out code.(”Çà”ùÿÿÿÿ8÷ßĞù.
-=python:S125"Remove this commented out code.(»ÇÊ*8¹ò‹«œ.
-Cpython:S125é"Remove this commented out code.(ËÍ¥×ùÿÿÿÿ8¹ò‹«œ.
-Cpython:S125¢"Remove this commented out code.(ğ²º€øÿÿÿÿ8¹ò‹«œ.
-Cpython:S125ü"Remove this commented out code.( ›±øúÿÿÿÿ8¹ò‹«œ.
-Cpython:S125é
-"Remove this commented out code.(¬‹Çşÿÿÿÿ8¹ò‹«œ.
-epython:S1854˜"GRemove this assignment to local variable 'pr'; the value is never used.(šÎº¤øÿÿÿÿ
-Cpython:S125
-"Remove this commented out code.(Û½¼ëşÿÿÿÿ8¹ò‹«œ.
-Jpython:S1481‡"%Remove the unused local variable "i".(½´—øÿÿÿÿ8¹ò‹«œ.
-Cpython:S125©"Remove this commented out code.(îê´ûÿÿÿÿ8¹ò‹«œ.
-Cpython:S125Ò"Remove this commented out code.(£¤ıøÿÿÿÿ8¹ò‹«œ.
->python:S125ê"Remove this commented out code.(ß¹Ã¯8¹ò‹«œ.
-Epython:S1481"%Remove the unused local variable "i".(›†Æ8¹ò‹«œ.
-Cpython:S125˜"Remove this commented out code.(Í»œµÿÿÿÿÿ8¹ò‹«œ.
-Cpython:S125“"Remove this commented out code.(‘óŸïûÿÿÿÿ8¹ò‹«œ.
-Mpython:S5603"(Remove this unused function declaration.(ß³ÁĞûÿÿÿÿ8¹ò‹«œ.
->python:S125"Remove this commented out code.(¶œÙ°8¹ò‹«œ.
-5python:S2772‹"Remove this unneeded "pass".(ã‘Û¾
->python:S125ì	"Remove this commented out code.(÷Ÿµ8¹ò‹«œ.
-Cpython:S125ä	"Remove this commented out code.(¾÷Ê¯ÿÿÿÿÿ8¹ò‹«œ.
-Cpython:S125Ö"Remove this commented out code.(”Çà”ùÿÿÿÿ8¹ò‹«œ.
-=python:S125"Remove this commented out code.(Şšµñ8¹ò‹«œ.
-Cpython:S125‡"Remove this commented out code.(”Çà”ùÿÿÿÿ8¹ò‹«œ.
-opython:S107W"LMethod "__init__" has 30 parameters, which is greater than the 7 authorized.(£Íº¿øÿÿÿÿ8¹ò‹«œ.
-Jpython:S1481˜"%Remove the unused local variable "i".(›Ö“Âøÿÿÿÿ8¹ò‹«œ.
-Hpython:S5603©"(Remove this unused function declaration.(Ù©Ø‹8¹ò‹«œ.
-Epython:S1481°"%Remove the unused local variable "n".(¢šè¼8¹ò‹«œ.
-Jpython:S1481ş"*Remove the unused local variable "figure".(êáåô8÷ßĞù.
-Cpython:S125ø"Remove this commented out code.(Û½¼ëşÿÿÿÿ8¹ò‹«œ.
->python:S125ü"Remove this commented out code.(Ş’ªê8¹ò‹«œ.
-=python:S125¤"Remove this commented out code.(»ÇÊ*8¹ò‹«œ.
-Cpython:S125"Remove this commented out code.(¾÷Ê¯ÿÿÿÿÿ8¹ò‹«œ.
-Cpython:S125Æ"Remove this commented out code.(íåœ´ùÿÿÿÿ8¹ò‹«œ.
->python:S125›"Remove this commented out code.(× „Í8¹ò‹«œ.
-Qpython:S1481Š",Remove the unused local variable "spikes_e".(ºÜ«±úÿÿÿÿ8¹ò‹«œ.
-Mpython:S1066š"/Merge this if statement with the enclosing one.(Ä¾µúÿÿÿÿ
-Lpython:S1481ç
-"'Remove the unused local variable "gfc".(Ë“ïúøÿÿÿÿ8¹ò‹«œ.
-=python:S125"Remove this commented out code.(º¼¬.8¹ò‹«œ.
-Cpython:S125œ"Remove this commented out code.(½È¥¿øÿÿÿÿ8¹ò‹«œ.
-=python:S125ø	"Remove this commented out code.(Û‡±z8¹ò‹«œ.
-=python:S125¬"Remove this commented out code.(£–ëG8¹ò‹«œ.
-Cpython:S125º	"Remove this commented out code.(¬‹Çşÿÿÿÿ8¹ò‹«œ.
-Jpython:S1481õ"%Remove the unused local variable "i".(›Ö“Âøÿÿÿÿ8¹ò‹«œ.
-=python:S125"Remove this commented out code.(”œß÷8¹ò‹«œ.
-Cpython:S125½	"Remove this commented out code.(½È¥¿øÿÿÿÿ8¹ò‹«œ.
-ppython:S1542æ
-"RRename function "test_2ASS" to match the regular expression ^[a-z_][a-z0-9_]{2,}$.(„ˆ¥âûÿÿÿÿ
-bpython:S3827¯"Dp_index is not defined. Change its name or define it before using it(é“ëËøÿÿÿÿ
-=python:S125G"Remove this commented out code.(…Óµ•8¹ò‹«œ.
-Mpython:S1481¥"-Remove the unused local variable "peak_time".(â¯Û»8¹ò‹«œ.
-Cpython:S125¶"Remove this commented out code.(¬‹Çşÿÿÿÿ8¹ò‹«œ.
-=python:S125Á"Remove this commented out code.(»ÇÊ*8¹ò‹«œ.
-Cpython:S125„"Remove this commented out code.(¬‹Çşÿÿÿÿ8¹ò‹«œ.
-Jpython:S1481Ü"*Remove the unused local variable "figure".(êáåô8÷ßĞù.
-=python:S125ã"Remove this commented out code.(Û‡±z8¹ò‹«œ.
->python:S125£"Remove this commented out code.(Ş²è8¹ò‹«œ.
-Cpython:S125ß	"Remove this commented out code.(”Çà”ùÿÿÿÿ8¹ò‹«œ.
->python:S125"Remove this commented out code.(ğÅ¿á8¹ò‹«œ.
-Cpython:S125Í"Remove this commented out code.(¾÷Ê¯ÿÿÿÿÿ8¹ò‹«œ.
->python:S125Ï"Remove this commented out code.(üªÚ»8¹ò‹«œ.
-\python:S3827ë"Cinject is not defined. Change its name or define it before using it(œà¢³
-Cpython:S125"Remove this commented out code.(ßµêÖûÿÿÿÿ8¹ò‹«œ.
-Cpython:S125¤"Remove this commented out code.(”Çà”ùÿÿÿÿ8÷ßĞù.
-ppython:S1542¥	"RRename function "test_noPS" to match the regular expression ^[a-z_][a-z0-9_]{2,}$.(—¦×üÿÿÿÿ
-epython:S1854š"GRemove this assignment to local variable 'pf'; the value is never used.(¥áŸ›ûÿÿÿÿ
-Jpython:S1481è"%Remove the unused local variable "i".(›Ö“Âøÿÿÿÿ8¹ò‹«œ.
-Gpython:S5603¶"(Remove this unused function declaration.(°ú}8¹ò‹«œ.
->python:S125”
-"Remove this commented out code.(ÁÜÏ8¹ò‹«œ.
-Cpython:S125¦"Remove this commented out code.(Â¹Õğüÿÿÿÿ8¹ò‹«œ.
->python:S125è	"Remove this commented out code.(ÉÜã8¹ò‹«œ.
-_python:S3827¯"An_gr is not defined. Change its name or define it before using it(é“ëËøÿÿÿÿ
-=python:S125"Remove this commented out code.(‡î×8¹ò‹«œ.
-Cpython:S125ì
-"Remove this commented out code.(½È¥¿øÿÿÿÿ8¹ò‹«œ.
->python:S125‘	"Remove this commented out code.(ãÑ°è8¹ò‹«œ.
-Cpython:S125Ş"Remove this commented out code.(µõºÿÿÿÿÿ8¹ò‹«œ.
-=python:S125Å	"Remove this commented out code.(»ÇÊ*8¹ò‹«œ.
-Cpython:S125™"Remove this commented out code.(¬‹Çşÿÿÿÿ8¹ò‹«œ.

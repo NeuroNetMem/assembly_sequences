@@ -42,16 +42,22 @@ def plot_ps_raster(net, chain_n=0, frac=1., permutate=False, dummy_ass=False):
     pyplot.title('PS %d neuron firing' % chain_n)
 
 
+def smooth_rate(mon, width=0.1*second):
+    dt = numpy.median(numpy.diff(mon.t/second))
+    sigma = width/second
+    return calc_spikes.gaus_smooth(mon.rate, w=dt, sigma=sigma)
+
+
 def plot_pop_fr(net, w=10 * ms):
     """plots E/I population FR"""
     pyplot.figure()
     pyplot.subplot(211)
-    pyplot.plot(net.mon_rate_e.t, net.mon_rate_e.smooth_rate(window='gaussian', width=0.1*second))
+    pyplot.plot(net.mon_rate_e.t, smooth_rate(net.mon_rate_e, width=0.1*second))
     pyplot.xlabel('t [ms]')
     pyplot.ylabel('FR [sp/sec]')
     pyplot.title('FR of E')
     pyplot.subplot(212)
-    pyplot.plot(net.mon_rate_e.t, net.mon_rate_i.smooth_rate(window='gaussian', width=0.1*second))
+    pyplot.plot(net.mon_rate_e.t, smooth_rate(net.mon_rate_i, width=0.1*second))
     pyplot.xlabel('t [ms]')
     pyplot.ylabel('FR [sp/sec]')
     pyplot.title('FR of I')

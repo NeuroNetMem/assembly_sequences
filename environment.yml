@@ -6,10 +6,12 @@ channels:
 dependencies:
   - brian2=2.2.2.1
   - brian2tools=0.2.1.1
+  - dotmap=1.2.20
   - jupyterlab=1.2.6
   - notebook=6.0.3
   - numpy=1.18.1
   - scipy=1.4.1
   - tqdm=4.46.0
+  - ipyparallel=6.2.5
 
 
