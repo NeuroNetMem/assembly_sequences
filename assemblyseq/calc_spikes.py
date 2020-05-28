@@ -1,5 +1,5 @@
 import numpy
-from brian2 import second
+from brian2 import second, Quantity
 
 
 def get_spike_train(times, dur=40, w=1., start_t=90):
@@ -83,6 +83,33 @@ def sptimes2spikes(sptimes):
     return r
 
 
+def spike_trains(mon):
+    indices = mon.i[:]
+    t = mon.t[:]
+    sort_indices = numpy.argsort(indices, kind='mergesort')
+    used_indices, first_pos = numpy.unique(mon.i[:][sort_indices],
+                                           return_index=True)
+    sorted_values = t[sort_indices]
+    dim = t.dim
+    event_values = {}
+    current_pos = 0  # position in the all_indices array
+    for idx in range(mon.i[:].max()):
+        if current_pos < len(used_indices) and used_indices[current_pos] == idx:
+            if current_pos < len(used_indices) - 1:
+                event_values[idx] = Quantity(sorted_values[
+                                             first_pos[current_pos]:
+                                             first_pos[current_pos + 1]],
+                                             dim=dim, copy=False)
+            else:
+                event_values[idx] = Quantity(
+                    sorted_values[first_pos[current_pos]:],
+                    dim=dim, copy=False)
+            current_pos += 1
+        else:
+            event_values[idx] = Quantity([], dim=dim)
+    return event_values
+
+
 def get_spike_times_ps(nn, n_ps=0, frac=1., permutate=False, exc_nrns=True,
                        dummy_ass=False, dummy_ass_frac=None, pick_first=True):
     """
@@ -108,7 +135,7 @@ def get_spike_times_ps(nn, n_ps=0, frac=1., permutate=False, exc_nrns=True,
     sp = []
     n = 0
 
-    trains = mon_spike.spike_trains()
+    trains = spike_trains(mon_spike)
     for gr in index[n_ps]:
         if not permutate:
             gr_neurons = gr

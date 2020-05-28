@@ -54,3 +54,9 @@ I
 notebooks/Fra_first.ipynb,b/1/b13a953ecf417f4dfd6ccf9098ca4e2c00c47721
 J
 assemblyseq/assemblyseq.py,3/7/37bc32dfec10dc998f4ead5c218c7d4827a1b4e3
+Q
+!notebooks/network_parallel1.ipynb,a/f/af446535d9c8a7930fc53ddef4781bc045092601
+P
+ scripts/run_simulation_simple.py,a/3/a3738a9edf6c330673a5854a9a47379f6b07329e
+I
+scripts/run_simulation.py,a/8/a8688e54e6a00b2e263fb43c2534da2ae3204a2b

@@ -32,7 +32,7 @@ dependencies:
   - dbus=1.13.14=h517e14e_0
   - decorator=4.4.2=py_0
   - defusedxml=0.6.0=py_0
-  - dotmap=1.2.20=py_0
+  - n=py_0
   - entrypoints=0.3=py36_0
   - expat=2.2.6=h0a44026_0
   - freetype=2.9.1=hb4e5f40_0
